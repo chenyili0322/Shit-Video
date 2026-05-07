@@ -313,6 +313,23 @@ export default function Home() {
 
           {/* 右側個人資訊與登出按鈕 */}
           <div className="flex items-center gap-4">
+            {/* 個人頭像 */}
+            <div
+              className="flex items-center gap-3 cursor-pointer"
+              onClick={() => setIsEditingProfile(true)}
+            >
+              <div className="text-right hidden sm:block">
+                <p className="text-xs font-black">{profile.display_name}</p>
+                <p className="text-[10px] text-gray-500 uppercase">Edit</p>
+              </div>
+              <img
+                src={
+                  profile.avatar_url ||
+                  `https://api.dicebear.com/7.x/bottts/svg?seed=${user.id}`
+                }
+                className="w-10 h-10 rounded-full border border-gray-700 object-cover"
+              />
+            </div>
             {/* 登出圖示按鈕 */}
             <button
               onClick={handleLogout}
@@ -334,24 +351,6 @@ export default function Home() {
                 <line x1="21" y1="12" x2="9" y2="12"></line>
               </svg>
             </button>
-
-            {/* 個人頭像 */}
-            <div
-              className="flex items-center gap-3 cursor-pointer"
-              onClick={() => setIsEditingProfile(true)}
-            >
-              <div className="text-right hidden sm:block">
-                <p className="text-xs font-black">{profile.display_name}</p>
-                <p className="text-[10px] text-gray-500 uppercase">Edit</p>
-              </div>
-              <img
-                src={
-                  profile.avatar_url ||
-                  `https://api.dicebear.com/7.x/bottts/svg?seed=${user.id}`
-                }
-                className="w-10 h-10 rounded-full border border-gray-700 object-cover"
-              />
-            </div>
           </div>
         </header>
       )}
@@ -677,7 +676,7 @@ export default function Home() {
                           </div>
                           <div className="flex items-center justify-between pt-8 border-t border-gray-800/50">
                             <div className="flex flex-col">
-                              <span className="text-[10px] text-gray-600 font-bold uppercase">
+                              <span className="text-2xl text-gray-600 font-bold uppercase">
                                 評價
                               </span>
                               <span className="text-3xl font-black text-yellow-500 leading-none mt-1">
