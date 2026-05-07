@@ -109,8 +109,7 @@ export default function Home() {
     if (!newGroupName.trim()) return alert("請輸入群組名稱");
     const secretKey = crypto.randomUUID();
 
-    // 這裡新增了 created_by: user.id
-    const { data: group } = await supabase
+    const { data: group, error } = await supabase
       .from("groups")
       .insert([
         {
@@ -122,13 +121,18 @@ export default function Home() {
       .select()
       .single();
 
-    if (group && user) {
-      await supabase
-        .from("group_members")
-        .insert([{ user_id: user.id, group_id: group.id }]);
-      setGeneratedKey(secretKey);
-      fetchMyGroups(user.id);
+    if (error) {
+      // 判斷是否為名稱重複錯誤 (PostgreSQL 錯誤碼 23505)
+      if (error.code === "23505") {
+        alert("這個群組名稱已經有人用過了，換一個吧！");
+      } else {
+        alert("建立失敗：" + error.message);
+      }
+      return;
     }
+
+    setGeneratedKey(secretKey);
+    fetchMyGroups(user.id);
   };
 
   const fetchVideos = async (groupId: string) => {
@@ -395,28 +399,31 @@ export default function Home() {
                 </button>
                 {/* 建立頻道的按鈕下方 */}
                 {generatedKey && (
-                  <div className="mt-8 p-6 bg-gray-900 rounded-[2rem] border-2 border-yellow-500 shadow-[0_0_20px_rgba(234,179,8,0.2)] animate-pulse-slow">
+                  <div className="mt-8 p-6 bg-gray-900 rounded-[2rem] border-2 border-yellow-500 shadow-[0_0_20px_rgba(234,179,8,0.3)] mx-auto w-full max-w-sm">
                     <p className="text-xs text-gray-400 mb-3 uppercase tracking-widest font-black text-center">
-                      頻道建立成功！頻道金鑰：
+                      🎉 頻道建立成功！
                     </p>
 
-                    {/* 這裡把字體調大 (text-xl)，顏色調亮 */}
-                    <div className="bg-black p-4 rounded-xl text-yellow-400 text-xl font-mono break-all text-center border border-gray-800 mb-4 select-all">
+                    {/* 金鑰主體：text-2xl 確保大字，font-mono 確保整齊 */}
+                    <div className="bg-black p-4 rounded-xl text-yellow-400 text-2xl font-mono break-all text-center border border-gray-800 mb-4 select-all shadow-inner">
                       {generatedKey}
                     </div>
 
+                    {/* 滿版大按鈕方便大拇指點擊 */}
                     <button
                       onClick={() => {
                         navigator.clipboard.writeText(generatedKey);
-                        alert("金鑰已成功複製。");
+                        alert("金鑰已成功複製到剪貼簿。");
                       }}
-                      className="w-full bg-yellow-500 text-black py-3 rounded-xl font-black text-sm hover:bg-yellow-400 transition-colors cursor-pointer"
+                      className="w-full bg-yellow-500 text-black py-4 rounded-xl font-black text-lg hover:bg-yellow-400 active:scale-95 transition-all cursor-pointer shadow-lg"
                     >
-                      點我直接複製金鑰
+                      複製金鑰
                     </button>
 
-                    <p className="text-[10px] text-gray-600 mt-3 text-center">
-                      提示：您可以點擊金鑰直接選取，或使用上方按鈕複製。
+                    <p className="text-[10px] text-gray-600 mt-4 text-center leading-relaxed">
+                      提示：您可以點擊金鑰直接選取，
+                      <br />
+                      或使用上方按鈕直接複製。
                     </p>
                   </div>
                 )}
