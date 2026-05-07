@@ -24,7 +24,7 @@ export default function Home() {
   const [tags, setTags] = useState("");
   const [videoList, setVideoList] = useState<any[]>([]);
   const [unseenCounts, setUnseenCounts] = useState<Record<string, number>>({});
-  
+
   useEffect(() => {
     if (!user) return;
 
@@ -32,45 +32,42 @@ export default function Home() {
       .channel("global-updates")
       .on(
         "postgres_changes",
-        {
-          event: "*", // 關鍵：改為監聽所有事件 (INSERT, DELETE, UPDATE)
-          schema: "public",
-          table: "videos",
-        },
+        { event: "*", schema: "public", table: "videos" },
         (payload) => {
-          // 處理新增影片
+          console.log("收到變動事件:", payload.eventType, payload);
+
+          // 1. 處理新增 (INSERT)
           if (payload.eventType === "INSERT") {
             const newVideo = payload.new;
-            setUnseenCounts((prev) => {
-              if (newVideo.group_id !== currentGroup?.id) {
-                return {
-                  ...prev,
-                  [newVideo.group_id]: (prev[newVideo.group_id] || 0) + 1,
-                };
-              }
-              return prev;
-            });
             if (newVideo.group_id === currentGroup?.id) {
-              fetchVideos(currentGroup.id);
+              fetchVideos(currentGroup.id); // 在當前群組：刷畫面
+            } else {
+              setUnseenCounts((prev) => ({
+                // 不在當前群組：加 💩
+                ...prev,
+                [newVideo.group_id]: (prev[newVideo.group_id] || 0) + 1,
+              }));
             }
           }
 
-          // 處理刪除影片
-          else if (payload.eventType === "DELETE") {
-            // 注意：刪除時資料在 payload.old 裡面
+          // 2. 處理刪除 (DELETE)
+          if (payload.eventType === "DELETE") {
+            // 這裡最重要：刪除的資料在 .old 裡面
             const oldVideo = payload.old;
-            if (oldVideo && oldVideo.group_id) {
-              setUnseenCounts((prev) => ({
-                ...prev,
-                [oldVideo.group_id]: Math.max(
-                  0,
-                  (prev[oldVideo.group_id] || 0) - 1,
-                ),
-              }));
 
-              // 如果剛好是正在看的群組被刪除，也要刷新列表
+            if (oldVideo && oldVideo.group_id) {
               if (oldVideo.group_id === currentGroup?.id) {
-                fetchVideos(currentGroup.id);
+                console.log("偵測到當前群組影片刪除，刷新列表");
+                fetchVideos(currentGroup.id); // 在當前群組：刷畫面
+              } else {
+                setUnseenCounts((prev) => ({
+                  // 不在當前群組：減 💩
+                  ...prev,
+                  [oldVideo.group_id]: Math.max(
+                    0,
+                    (prev[oldVideo.group_id] || 0) - 1,
+                  ),
+                }));
               }
             }
           }
