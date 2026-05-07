@@ -270,14 +270,26 @@ export default function Home() {
     }
   };
   const handleLogout = async () => {
+    // 第一層防呆：彈出對話框
+    const singleCheck = window.confirm(
+      "確定要登出嗎？",
+    );
+
+    if (!singleCheck) return; // 使用者按取消，直接結束
+
+    // 如果確定要登出
     const { error } = await supabase.auth.signOut();
-    if (!error) {
-      setUser(null);
-      setProfile(null);
-      setCurrentGroup(null);
-      // 重點：直接刷回首頁或清空狀態
-      window.location.reload();
+
+    if (error) {
+      alert("登出失敗：" + error.message);
+      return;
     }
+
+    // 清空狀態並刷新
+    setUser(null);
+    setProfile(null);
+    setCurrentGroup(null);
+    window.location.reload();
   };
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
