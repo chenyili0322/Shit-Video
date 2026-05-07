@@ -37,19 +37,24 @@ body {
   position: absolute;
   white-space: nowrap;
   pointer-events: none;
-  will-change: transform;
-  font-family: "Microsoft JhengHei", "Heiti TC", sans-serif;
   font-weight: 900;
-  line-height: 1;
   z-index: 50;
+  color: #ffffff; /* 保持白色填充 */
 
-  /* B站靈魂：粗黑描邊 + 陰影，不管影片多亮都看得到字 */
-  color: #ffffff;
+  /* 1. 徹底停用會導致筆畫露餡的屬性 */
+  -webkit-text-stroke: unset !important;
+
+  /* 2. 改用四個方向的細微陰影來模擬「黑邊」 */
+  /* 這樣字體看起來會很紮實，筆畫內部也不會出線 */
   text-shadow:
-    1px 1px 2px rgba(0, 0, 0, 0.7),
-    0 0 1px rgba(0, 0, 0, 0.9);
-  -webkit-text-stroke: 0.5px rgba(0, 0, 0, 0.5);
+    1.5px 1.5px 0px rgba(0, 0, 0, 0.9),
+    -1px -1px 0px rgba(0, 0, 0, 0.9),
+    1px -1px 0px rgba(0, 0, 0, 0.9),
+    -1px 1px 0px rgba(0, 0, 0, 0.9);
 
-  /* 動態參數由 React 傳入 */
+  /* 3. 優化移動性能 */
+  will-change: transform;
+  transform: translateZ(0);
+
   animation: danmaku-run 8s linear infinite;
 }
