@@ -215,7 +215,7 @@ export default function Home() {
       {user && profile && (
         <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-md border-b border-gray-800 p-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            {/* Hamburger Menu (手機才顯示) */}
+            {/* Hamburger Menu */}
             <button
               onClick={() => setIsSidebarOpen(true)}
               className="md:hidden cursor-pointer p-1"
@@ -233,7 +233,12 @@ export default function Home() {
                 <line x1="3" y1="18" x2="21" y2="18"></line>
               </svg>
             </button>
-            <h1 className="text-xl font-black italic text-yellow-500 tracking-tighter">
+
+            {/* 修改這裡：加入 onClick 和 cursor-pointer */}
+            <h1
+              onClick={() => setCurrentGroup(null)}
+              className="text-xl font-black italic text-yellow-500 tracking-tighter cursor-pointer hover:opacity-80 transition-opacity"
+            >
               SHIT-VIDEO
             </h1>
           </div>
@@ -388,9 +393,31 @@ export default function Home() {
                 >
                   建立頻道
                 </button>
+                {/* 建立頻道的按鈕下方 */}
                 {generatedKey && (
-                  <div className="mt-4 p-4 bg-gray-900 rounded-2xl text-yellow-500 text-[10px] break-all font-mono">
-                    {generatedKey}
+                  <div className="mt-8 p-6 bg-gray-900 rounded-[2rem] border-2 border-yellow-500 shadow-[0_0_20px_rgba(234,179,8,0.2)] animate-pulse-slow">
+                    <p className="text-xs text-gray-400 mb-3 uppercase tracking-widest font-black text-center">
+                      頻道建立成功！頻道金鑰：
+                    </p>
+
+                    {/* 這裡把字體調大 (text-xl)，顏色調亮 */}
+                    <div className="bg-black p-4 rounded-xl text-yellow-400 text-xl font-mono break-all text-center border border-gray-800 mb-4 select-all">
+                      {generatedKey}
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(generatedKey);
+                        alert("金鑰已成功複製。");
+                      }}
+                      className="w-full bg-yellow-500 text-black py-3 rounded-xl font-black text-sm hover:bg-yellow-400 transition-colors cursor-pointer"
+                    >
+                      點我直接複製金鑰
+                    </button>
+
+                    <p className="text-[10px] text-gray-600 mt-3 text-center">
+                      提示：您可以點擊金鑰直接選取，或使用上方按鈕複製。
+                    </p>
                   </div>
                 )}
               </div>
