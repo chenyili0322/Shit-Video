@@ -69,14 +69,12 @@ export default function Home() {
   };
 
   const handleSaveProfile = async () => {
-    const { error } = await supabase
-      .from("profiles")
-      .upsert({
-        id: user.id,
-        display_name: tempName,
-        avatar_url: avatarUrl,
-        updated_at: new Date(),
-      });
+    const { error } = await supabase.from("profiles").upsert({
+      id: user.id,
+      display_name: tempName,
+      avatar_url: avatarUrl,
+      updated_at: new Date(),
+    });
     if (!error) {
       await fetchProfile(user.id);
       setIsEditingProfile(false);
@@ -145,16 +143,14 @@ export default function Home() {
       : null;
     if (!embedUrl) return alert("網址錯誤");
     if (videoList.some((v) => v.url === embedUrl)) return alert("重複了");
-    await supabase
-      .from("videos")
-      .insert([
-        {
-          url: embedUrl,
-          group_id: currentGroup.id,
-          created_by: user.id,
-          title: tags,
-        },
-      ]);
+    await supabase.from("videos").insert([
+      {
+        url: embedUrl,
+        group_id: currentGroup.id,
+        created_by: user.id,
+        title: tags,
+      },
+    ]);
     setVideoUrl("");
     setTags("");
     fetchVideos(currentGroup.id);
@@ -181,6 +177,28 @@ export default function Home() {
     return avg >= 3.5 ? "ㄅ" : avg >= 2.5 ? "ㄆ" : avg >= 1.5 ? "ㄇ" : "ㄈ";
   };
 
+  const handleDeleteGroup = async (groupId: string, groupName: string) => {
+    // 雙重確認，避免手滑
+    const confirmName = prompt(
+      `確定要刪除「${groupName}」嗎？此動作無法復原。\n請輸入群組名稱以確認刪除：`,
+    );
+
+    if (confirmName !== groupName) {
+      if (confirmName !== null) alert("名稱輸入錯誤，取消刪除。");
+      return;
+    }
+
+    // 執行刪除 (由於之前 SQL 設有 ON DELETE CASCADE，相關影片與成員紀錄會自動刪除)
+    const { error } = await supabase.from("groups").delete().eq("id", groupId);
+
+    if (error) {
+      alert("刪除失敗：" + error.message);
+    } else {
+      alert("群組已永久刪除");
+      setCurrentGroup(null); // 回到大廳
+      fetchMyGroups(user.id); // 重新整理側邊欄
+    }
+  };
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
       {/* 1. 手機版 & 電腦版通用頂部導覽列 */}
@@ -393,12 +411,27 @@ export default function Home() {
                       </svg>
                     </button>
                   </div>
-                  <button
-                    onClick={() => setCurrentGroup(null)}
-                    className="text-xs text-gray-600 hover:text-white cursor-pointer"
-                  >
-                    離開頻道
-                  </button>
+                  <div className="flex gap-4 items-center">
+                    {/* 刪除群組按鈕 */}
+                    <button
+                      onClick={() =>
+                        handleDeleteGroup(
+                          currentGroup.id,
+                          currentGroup.group_name,
+                        )
+                      }
+                      className="text-[10px] text-red-500 font-bold border border-red-500/30 hover:bg-red-500 hover:text-white px-2 py-1 rounded transition cursor-pointer"
+                    >
+                      刪除群組
+                    </button>
+
+                    <button
+                      onClick={() => setCurrentGroup(null)}
+                      className="text-xs text-gray-600 hover:text-white cursor-pointer"
+                    >
+                      離開頻道
+                    </button>
+                  </div>
                 </div>
 
                 <div className="bg-gray-900 p-6 rounded-[2.5rem] border border-gray-800 shadow-xl">
