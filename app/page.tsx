@@ -269,11 +269,19 @@ export default function Home() {
     const { data } = await supabase
       .from("videos")
       .select(
-        // 這裡補上 profiles:created_by(...) 確保抓到作者的背景色
-        "*, profiles:created_by(display_name, avatar_url, avatar_bg), ratings(score, user_id, profiles:user_id(display_name, avatar_url, avatar_bg))",
+        `
+      *,
+      author:created_by (display_name, avatar_url, avatar_bg),
+      ratings (
+        score, 
+        user_id, 
+        profiles:user_id (display_name, avatar_url, avatar_bg)
+      )
+    `,
       )
       .eq("group_id", groupId)
       .order("created_at", { ascending: false });
+
     if (data) setVideoList(data);
   };
 
@@ -745,6 +753,29 @@ export default function Home() {
                           ></iframe>
                         </div>
                         <div className="p-8">
+                          {/* 發布者資訊區 */}
+                          <div className="flex items-center gap-3 mb-6 bg-black/40 p-3 rounded-2xl border border-gray-800/50">
+                            <img
+                              src={
+                                vid.author?.avatar_url ||
+                                `https://api.dicebear.com/7.x/bottts/svg?seed=${vid.created_by}`
+                              }
+                              style={{
+                                backgroundColor:
+                                  vid.author?.avatar_bg || "#ffffff",
+                              }}
+                              className="w-8 h-8 rounded-full border border-gray-700 object-cover"
+                            />
+                            <div className="flex flex-col">
+                              <span className="text-[10px] text-gray-500 uppercase font-black tracking-widest leading-none">
+                                Posted By
+                              </span>
+                              <span className="text-sm font-bold text-yellow-500">
+                                {vid.author?.display_name || "未知大師"}
+                              </span>
+                            </div>
+                          </div>
+
                           <div className="flex justify-between items-center mb-6">
                             <div className="flex gap-2 overflow-x-auto no-scrollbar">
                               {vid.title?.split(",").map(
