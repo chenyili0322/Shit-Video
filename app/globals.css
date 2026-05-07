@@ -26,19 +26,30 @@ body {
 }
 @keyframes danmaku-run {
   from {
-    transform: translateX(100%);
-  }
+    transform: translateX(100vw);
+  } /* 從螢幕最右側外面開始 */
   to {
-    transform: translateX(-200%); /* 確保完全飄出螢幕左側 */
-  }
+    transform: translateX(-100%);
+  } /* 飄到自己完全消失在左側 */
 }
 
-/* 注意這裡改成了 .danmaku-text */
-.danmaku-text {
+.danmaku-item {
   position: absolute;
   white-space: nowrap;
-  animation: danmaku-run 8s linear infinite; /* 名稱要跟上面的 keyframes 對應 */
-  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.9);
-  font-weight: 900;
   pointer-events: none;
+  will-change: transform;
+  font-family: "Microsoft JhengHei", "Heiti TC", sans-serif;
+  font-weight: 900;
+  line-height: 1;
+  z-index: 50;
+
+  /* B站靈魂：粗黑描邊 + 陰影，不管影片多亮都看得到字 */
+  color: #ffffff;
+  text-shadow:
+    1px 1px 2px rgba(0, 0, 0, 0.7),
+    0 0 1px rgba(0, 0, 0, 0.9);
+  -webkit-text-stroke: 0.5px rgba(0, 0, 0, 0.5);
+
+  /* 動態參數由 React 傳入 */
+  animation: danmaku-run 8s linear infinite;
 }

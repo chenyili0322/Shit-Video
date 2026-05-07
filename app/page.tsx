@@ -758,7 +758,7 @@ export default function Home() {
                         className="bg-gray-900 rounded-[3rem] overflow-hidden border border-gray-800 shadow-2xl"
                       >
                         <div
-                          className="mx-auto bg-black"
+                          className="mx-auto bg-black relative overflow-hidden"
                           style={{
                             width: "100%",
                             maxWidth: isShorts ? "360px" : "100%",
@@ -771,22 +771,30 @@ export default function Home() {
                             src={vid.url}
                             frameBorder="0"
                             allowFullScreen
+                            className="relative z-0"
                           ></iframe>
-                          {/* 彈幕層 */}
-                          {vid.comments?.map((c: any, index: number) => (
-                            <span
-                              key={c.id}
-                              className="danmaku-text text-white text-base"
-                              style={{
-                                // 錯開高度，避免擋到影片中心
-                                top: `${((index * 20) % 70) + 5}%`,
-                                // 讓彈幕出現的時間更有層次
-                                animationDelay: `${(index * 1.2) % 10}s`,
-                              }}
-                            >
-                              {c.content}
-                            </span>
-                          ))}
+
+                          {/* 彈幕層 - B站風排版 */}
+                          <div className="absolute inset-0 z-10 pointer-events-none">
+                            {vid.comments?.map((c: any, index: number) => {
+                              // 模擬軌道：每支影片分 8 個軌道
+                              const track = index % 8;
+                              return (
+                                <span
+                                  key={c.id}
+                                  className="danmaku-item text-base md:text-lg"
+                                  style={{
+                                    top: `${track * 10 + 5}%`, // 每個軌道佔 10% 高度
+                                    // 讓越新的留言 (index 越小) 越晚出來，或者根據 index 分配延遲
+                                    animationDelay: `${index * 2}s`,
+                                    animationDuration: "10s", // 飄動速度
+                                  }}
+                                >
+                                  {c.content}
+                                </span>
+                              );
+                            })}
+                          </div>
                         </div>
                         <div className="p-8">
                           {/* 發布者資訊區 */}
