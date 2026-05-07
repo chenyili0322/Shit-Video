@@ -380,13 +380,11 @@ export default function Home() {
     }
   };
   const fetchGroupMembers = async (groupId: string) => {
-    console.log("正在抓取群組成員，ID:", groupId);
-
     const { data, error } = await supabase
       .from("group_members")
       .select(
         `
-      profiles:user_id (
+      profiles (
         display_name, 
         avatar_url, 
         avatar_bg
@@ -401,14 +399,8 @@ export default function Home() {
     }
 
     if (data) {
-      console.log("原始回傳資料:", data);
-
-      // 確保 m.profiles 存在才放入陣列
-      const members = data
-        .map((m: any) => m.profiles)
-        .filter((profile) => profile !== null);
-
-      console.log("處理後的成員名單:", members);
+      // 攤平資料：取出關聯的 profiles 內容
+      const members = data.map((m: any) => m.profiles).filter(Boolean);
       setCurrentMembers(members);
     }
   };
