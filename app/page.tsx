@@ -76,6 +76,16 @@ export default function Home() {
           }
         },
       )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "ratings" },
+        () => {
+          console.log("偵測到新評分，同步更新...");
+          if (currentGroup?.id) {
+            fetchVideos(currentGroup.id); // 只要有人評分，就重新抓取目前群組的影片資料
+          }
+        }
+      )
       .subscribe();
 
     return () => {
@@ -394,7 +404,7 @@ export default function Home() {
                   profile.avatar_url ||
                   `https://api.dicebear.com/7.x/bottts/svg?seed=${user.id}`
                 }
-                className="w-10 h-10 rounded-full border border-gray-700 object-cover"
+                className="w-10 h-10 rounded-full border border-gray-700 object-cover bg-gray-100 shadow-[0_0_10px_rgba(255,255,255,0.1)]"
               />
             </div>
             {/* 登出圖示按鈕 */}
@@ -506,7 +516,7 @@ export default function Home() {
                       avatarUrl ||
                       `https://api.dicebear.com/7.x/bottts/svg?seed=${user.id}`
                     }
-                    className="w-full h-full rounded-full bg-black border-2 border-gray-800 object-cover"
+                    className="w-full h-full rounded-full bg-black border-2 border-gray-800 object-cover shadow-[0_0_10px_rgba(255,255,255,0.1)]"
                   />
                   <label className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition">
                     <span className="text-[10px] font-bold">
@@ -787,7 +797,7 @@ export default function Home() {
                                     r.profiles?.avatar_url ||
                                     `https://api.dicebear.com/7.x/bottts/svg?seed=${r.user_id}`
                                   }
-                                  className="w-4 h-4 rounded-full"
+                                  className="w-4 h-4 rounded-full shadow-[0_0_10px_rgba(255,255,255,0.1)]"
                                 />
                                 <span className="text-gray-400 font-bold">
                                   {r.profiles?.display_name}:
