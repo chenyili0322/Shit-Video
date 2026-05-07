@@ -106,12 +106,22 @@ export default function Home() {
   };
 
   const handleCreateGroup = async () => {
+    if (!newGroupName.trim()) return alert("請輸入群組名稱");
     const secretKey = crypto.randomUUID();
+
+    // 這裡新增了 created_by: user.id
     const { data: group } = await supabase
       .from("groups")
-      .insert([{ group_name: newGroupName, access_key: secretKey }])
+      .insert([
+        {
+          group_name: newGroupName,
+          access_key: secretKey,
+          created_by: user.id,
+        },
+      ])
       .select()
       .single();
+
     if (group && user) {
       await supabase
         .from("group_members")
@@ -412,18 +422,20 @@ export default function Home() {
                     </button>
                   </div>
                   <div className="flex gap-4 items-center">
-                    {/* 刪除群組按鈕 */}
-                    <button
-                      onClick={() =>
-                        handleDeleteGroup(
-                          currentGroup.id,
-                          currentGroup.group_name,
-                        )
-                      }
-                      className="text-[10px] text-red-500 font-bold border border-red-500/30 hover:bg-red-500 hover:text-white px-2 py-1 rounded transition cursor-pointer"
-                    >
-                      刪除群組
-                    </button>
+                    {/* 關鍵判斷：只有創建者才看得到刪除按鈕 */}
+                    {user.id === currentGroup.created_by && (
+                      <button
+                        onClick={() =>
+                          handleDeleteGroup(
+                            currentGroup.id,
+                            currentGroup.group_name,
+                          )
+                        }
+                        className="text-[10px] text-red-500 font-bold border border-red-500/30 hover:bg-red-500 hover:text-white px-2 py-1 rounded transition cursor-pointer"
+                      >
+                        刪除群組
+                      </button>
+                    )}
 
                     <button
                       onClick={() => setCurrentGroup(null)}
