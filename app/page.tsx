@@ -269,13 +269,23 @@ export default function Home() {
       fetchMyGroups(user.id); // 重新整理側邊欄
     }
   };
+  const handleLogout = async () => {
+    const { error } = await supabase.auth.signOut();
+    if (!error) {
+      setUser(null);
+      setProfile(null);
+      setCurrentGroup(null);
+      // 重點：直接刷回首頁或清空狀態
+      window.location.reload();
+    }
+  };
   return (
     <div className="min-h-screen bg-black text-white flex flex-col">
       {/* 1. 手機版 & 電腦版通用頂部導覽列 */}
       {user && profile && (
         <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-md border-b border-gray-800 p-4 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            {/* Hamburger Menu */}
+            {/* Hamburger Menu & Logo */}
             <button
               onClick={() => setIsSidebarOpen(true)}
               className="md:hidden cursor-pointer p-1"
@@ -293,33 +303,55 @@ export default function Home() {
                 <line x1="3" y1="18" x2="21" y2="18"></line>
               </svg>
             </button>
-
-            {/* 修改這裡：加入 onClick 和 cursor-pointer */}
             <h1
               onClick={() => setCurrentGroup(null)}
-              className="text-xl font-black italic text-yellow-500 tracking-tighter cursor-pointer hover:opacity-80 transition-opacity"
+              className="text-xl font-black italic text-yellow-500 tracking-tighter cursor-pointer"
             >
               SHIT-VIDEO
             </h1>
           </div>
 
-          <div
-            className="flex items-center gap-3 cursor-pointer"
-            onClick={() => setIsEditingProfile(true)}
-          >
-            <div className="text-right hidden sm:block">
-              <p className="text-xs font-black">{profile.display_name}</p>
-              <p className="text-[10px] text-gray-500 uppercase">
-                Edit Profile
-              </p>
+          {/* 右側個人資訊與登出按鈕 */}
+          <div className="flex items-center gap-4">
+            {/* 登出圖示按鈕 */}
+            <button
+              onClick={handleLogout}
+              className="p-2 text-gray-500 hover:text-red-500 transition-colors cursor-pointer"
+              title="登出"
+            >
+              <svg
+                width="20"
+                height="20"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                <polyline points="16 17 21 12 16 7"></polyline>
+                <line x1="21" y1="12" x2="9" y2="12"></line>
+              </svg>
+            </button>
+
+            {/* 個人頭像 */}
+            <div
+              className="flex items-center gap-3 cursor-pointer"
+              onClick={() => setIsEditingProfile(true)}
+            >
+              <div className="text-right hidden sm:block">
+                <p className="text-xs font-black">{profile.display_name}</p>
+                <p className="text-[10px] text-gray-500 uppercase">Edit</p>
+              </div>
+              <img
+                src={
+                  profile.avatar_url ||
+                  `https://api.dicebear.com/7.x/bottts/svg?seed=${user.id}`
+                }
+                className="w-10 h-10 rounded-full border border-gray-700 object-cover"
+              />
             </div>
-            <img
-              src={
-                profile.avatar_url ||
-                `https://api.dicebear.com/7.x/bottts/svg?seed=${user.id}`
-              }
-              className="w-10 h-10 rounded-full border border-gray-700 object-cover"
-            />
           </div>
         </header>
       )}
