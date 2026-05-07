@@ -246,6 +246,7 @@ export default function Home() {
     if (!newGroupName.trim()) return alert("請輸入群組名稱");
     const secretKey = crypto.randomUUID();
 
+    // 1. 建立群組
     const { data: group, error } = await supabase
       .from("groups")
       .insert([
@@ -259,7 +260,6 @@ export default function Home() {
       .single();
 
     if (error) {
-      // 判斷是否為名稱重複錯誤 (PostgreSQL 錯誤碼 23505)
       if (error.code === "23505") {
         alert("這個群組名稱已經有人用過了，換一個吧！");
       } else {
@@ -268,8 +268,21 @@ export default function Home() {
       return;
     }
 
+    // 2. 【關鍵修正】將創建者本人加入成員表
+    const { error: memberError } = await supabase.from("group_members").insert([
+      {
+        user_id: user.id,
+        group_id: group.id,
+      },
+    ]);
+
+    if (memberError) {
+      console.error("無法將創建者加入成員表:", memberError);
+    }
+
+    // 3. 更新 UI
     setGeneratedKey(secretKey);
-    fetchMyGroups(user.id);
+    fetchMyGroups(user.id); // 重新抓取後，側邊欄就會出現新群組了
   };
 
   const fetchVideos = async (groupId: string) => {
