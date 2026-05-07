@@ -214,7 +214,7 @@ export default function Home() {
 
   return (
     <div className="min-h-screen bg-black text-white flex">
-      {/* 側邊欄 */}
+      {/* 側邊欄 (電腦版顯示) */}
       {user && profile && !isEditingProfile && (
         <aside className="w-64 border-r border-gray-800 p-6 hidden md:flex flex-col gap-8">
           <div className="flex items-center gap-3">
@@ -342,19 +342,19 @@ export default function Home() {
               </div>
               <div className="text-center space-y-4">
                 <input
-                  className="bg-transparent border-b border-gray-800 p-3 text-center w-full mb-2 text-xl outline-none"
+                  className="bg-transparent border-b border-gray-800 p-3 text-center w-full mb-2 text-xl outline-none font-black text-yellow-500"
                   placeholder="新群組名稱"
                   value={newGroupName}
                   onChange={(e) => setNewGroupName(e.target.value)}
                 />
                 <button
                   onClick={handleCreateGroup}
-                  className="text-sm text-gray-500 underline font-bold tracking-widest uppercase cursor-pointer"
+                  className="text-sm text-gray-500 underline font-bold tracking-widest uppercase cursor-pointer hover:text-white"
                 >
                   建立新頻道
                 </button>
                 {generatedKey && (
-                  <div className="mt-4 p-4 bg-gray-900 rounded-2xl text-yellow-500 text-[10px] break-all font-mono">
+                  <div className="mt-4 p-4 bg-gray-900 rounded-2xl text-yellow-500 text-[10px] break-all font-mono border border-yellow-500/20">
                     {generatedKey}
                   </div>
                 )}
@@ -362,19 +362,63 @@ export default function Home() {
             </div>
           ) : (
             <div className="space-y-10">
+              {/* 手機版頂部：導覽選單與個人檔案 */}
+              <div className="md:hidden flex items-center justify-between mb-8 bg-gray-900/50 p-4 rounded-3xl border border-gray-800">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={
+                      profile.avatar_url ||
+                      `https://api.dicebear.com/7.x/bottts/svg?seed=${user.id}`
+                    }
+                    className="w-10 h-10 rounded-full border border-gray-700 cursor-pointer"
+                    onClick={() => setIsEditingProfile(true)}
+                  />
+                  <select
+                    className="bg-transparent font-black text-sm outline-none cursor-pointer text-yellow-500"
+                    value={currentGroup.id}
+                    onChange={(e) => {
+                      const selected = myGroups.find(
+                        (g) => g.id === e.target.value,
+                      );
+                      if (selected) {
+                        setCurrentGroup(selected);
+                        fetchVideos(selected.id);
+                      }
+                    }}
+                  >
+                    {myGroups.map((g) => (
+                      <option
+                        key={g.id}
+                        value={g.id}
+                        className="bg-black text-white"
+                      >
+                        # {g.group_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <button
+                  onClick={() => setCurrentGroup(null)}
+                  className="text-[10px] font-bold text-gray-500 uppercase border border-gray-800 px-3 py-1 rounded-full"
+                >
+                  返回
+                </button>
+              </div>
+
+              {/* 頻道標題與分享 */}
               <div className="flex justify-between items-end px-2">
                 <div>
                   <p className="text-[10px] text-gray-600 font-bold uppercase mb-1">
-                    正在觀看
+                    正在觀看頻道
                   </p>
                   <div className="flex items-center gap-3">
-                    <h2 className="text-4xl font-black">
+                    <h2 className="text-4xl font-black italic">
                       {currentGroup.group_name}
                     </h2>
                     <button
                       onClick={() => copyToClipboard(currentGroup.access_key)}
-                      className="p-2 bg-gray-900 rounded-xl hover:bg-gray-800 text-yellow-500 transition-all border border-gray-800 cursor-pointer"
-                      title="複製群組金鑰"
+                      className="p-2 bg-gray-900 rounded-xl hover:bg-gray-800 text-yellow-500 transition-all border border-gray-800 cursor-pointer shadow-lg"
+                      title="複製金鑰"
                     >
                       <svg
                         width="18"
@@ -394,33 +438,35 @@ export default function Home() {
                 </div>
                 <button
                   onClick={() => setCurrentGroup(null)}
-                  className="text-xs text-gray-600 hover:text-white transition cursor-pointer"
+                  className="hidden md:block text-xs text-gray-600 hover:text-white transition cursor-pointer"
                 >
                   切換頻道
                 </button>
               </div>
 
+              {/* 分享區塊 */}
               <div className="bg-gray-900 p-6 rounded-[2.5rem] border border-gray-800 shadow-xl">
                 <input
                   className="w-full bg-black p-4 rounded-2xl mb-3 text-sm outline-none focus:ring-1 ring-blue-500"
-                  placeholder="YouTube / Shorts 連結"
+                  placeholder="貼上 YouTube / Shorts 連結"
                   value={videoUrl}
                   onChange={(e) => setVideoUrl(e.target.value)}
                 />
                 <input
                   className="w-full bg-black p-4 rounded-2xl mb-4 text-sm outline-none focus:ring-1 ring-blue-500"
-                  placeholder="標籤 (用逗號隔開)"
+                  placeholder="標籤 (例如: 狠角色, 搞笑)"
                   value={tags}
                   onChange={(e) => setTags(e.target.value)}
                 />
                 <button
                   onClick={handleSubmitVideo}
-                  className="w-full bg-blue-600 py-4 rounded-2xl font-black text-lg shadow-lg shadow-blue-900/40 cursor-pointer"
+                  className="w-full bg-blue-600 py-4 rounded-2xl font-black text-lg shadow-lg shadow-blue-900/40 cursor-pointer hover:bg-blue-500 transition"
                 >
-                  分享幹片
+                  分享影片
                 </button>
               </div>
 
+              {/* 影片牆 */}
               <div className="space-y-16">
                 {videoList.map((vid) => {
                   const isShorts = vid.url.includes("#shorts");
@@ -447,7 +493,7 @@ export default function Home() {
                       </div>
                       <div className="p-8">
                         <div className="flex justify-between items-start mb-6">
-                          <div className="flex gap-2 overflow-x-auto no-scrollbar">
+                          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2">
                             {vid.title?.split(",").map(
                               (t: any) =>
                                 t.trim() && (
@@ -463,7 +509,7 @@ export default function Home() {
                           {user.id === vid.created_by && (
                             <button
                               onClick={() => handleDeleteVideo(vid.id)}
-                              className="text-gray-700 hover:text-red-500 transition-colors cursor-pointer"
+                              className="text-gray-700 hover:text-red-500 transition-colors cursor-pointer ml-4"
                             >
                               <svg
                                 width="20"
@@ -481,7 +527,7 @@ export default function Home() {
                         <div className="flex items-center justify-between pt-8 border-t border-gray-800/50">
                           <div className="flex flex-col">
                             <span className="text-[10px] text-gray-600 font-bold uppercase tracking-widest">
-                              目前等級
+                              平均評價
                             </span>
                             <span className="text-3xl font-black text-yellow-500 leading-none mt-1">
                               {getAvg(vid.ratings)}
@@ -518,9 +564,9 @@ export default function Home() {
                                   r.profiles?.avatar_url ||
                                   `https://api.dicebear.com/7.x/bottts/svg?seed=${r.user_id}`
                                 }
-                                className="w-4 h-4 rounded-full"
+                                className="w-4 h-4 rounded-full object-cover"
                               />
-                              <span className="text-gray-500">
+                              <span className="text-gray-400 font-bold">
                                 {r.profiles?.display_name || "網友"}:
                               </span>
                               <span className="font-black text-white">
