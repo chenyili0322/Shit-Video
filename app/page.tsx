@@ -88,6 +88,13 @@ export default function Home() {
           }
         },
       )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "comments" },
+        () => {
+          if (currentGroup?.id) fetchVideos(currentGroup.id); // 留言進來就刷資料
+        },
+      )
       .subscribe();
 
     return () => {
@@ -276,7 +283,8 @@ export default function Home() {
         score, 
         user_id, 
         profiles:user_id (display_name, avatar_url, avatar_bg)
-      )
+      ),
+        comments (id, content, created_at)
     `,
       )
       .eq("group_id", groupId)
@@ -751,6 +759,21 @@ export default function Home() {
                             frameBorder="0"
                             allowFullScreen
                           ></iframe>
+                          {/* 彈幕層 */}
+                          {vid.comments?.map((c: any, index: number) => (
+                            <span
+                              key={c.id}
+                              className="danmaku-text text-white text-base"
+                              style={{
+                                // 錯開高度，避免擋到影片中心
+                                top: `${((index * 20) % 70) + 5}%`,
+                                // 讓彈幕出現的時間更有層次
+                                animationDelay: `${(index * 1.2) % 10}s`,
+                              }}
+                            >
+                              {c.content}
+                            </span>
+                          ))}
                         </div>
                         <div className="p-8">
                           {/* 發布者資訊區 */}
@@ -823,6 +846,44 @@ export default function Home() {
                                 </svg>
                               </button>
                             )}
+                          </div>
+                          {/* 彈幕輸入框 */}
+                          <div className="mb-6 px-2">
+                            <div className="relative">
+                              <input
+                                className="w-full bg-black border border-gray-800 rounded-2xl py-3 px-4 text-sm outline-none focus:border-blue-500 transition-all pr-12"
+                                placeholder="發射彈幕吐槽..."
+                                onKeyDown={async (e) => {
+                                  if (
+                                    e.key === "Enter" &&
+                                    e.currentTarget.value.trim()
+                                  ) {
+                                    const content = e.currentTarget.value;
+                                    const inputNode = e.currentTarget; // 先抓著節點
+
+                                    const { error } = await supabase
+                                      .from("comments")
+                                      .insert([
+                                        {
+                                          video_id: vid.id,
+                                          user_id: user.id,
+                                          content: content,
+                                        },
+                                      ]);
+
+                                    if (!error) {
+                                      inputNode.value = ""; // 清空輸入框
+                                      // 因為我們有 Realtime 監聽，fetchVideos 會自動被觸發
+                                    } else {
+                                      alert("彈幕發射失敗：" + error.message);
+                                    }
+                                  }
+                                }}
+                              />
+                              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-600">
+                                ENTER
+                              </div>
+                            </div>
                           </div>
                           <div className="flex items-center justify-between pt-8 border-t border-gray-800/50">
                             <div className="flex flex-col">

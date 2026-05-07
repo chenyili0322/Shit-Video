@@ -24,3 +24,19 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+@keyframes danmaku {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(-200%);
+  }
+}
+.danmaku-item {
+  position: absolute;
+  white-space: nowrap;
+  animation: danmaku 8s linear infinite;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.9);
+  font-weight: 900;
+  pointer-events: none;
+}
