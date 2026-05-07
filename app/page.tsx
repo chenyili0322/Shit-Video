@@ -128,19 +128,42 @@ export default function Home() {
   };
 
   const handleJoinGroup = async () => {
-    const { data: group } = await supabase
+    // 1. 使用 .maybeSingle() 取代 .single()
+    // .maybeSingle() 在找不到東西時會回傳 { data: null, error: null }，不會報錯 406
+    const { data: group, error } = await supabase
       .from("groups")
       .select("*")
       .eq("access_key", inputKey)
-      .single();
+      .maybeSingle();
+
+    if (error) {
+      console.error("Join error:", error);
+      alert("查詢時發生錯誤，請稍後再試");
+      return;
+    }
+
     if (group) {
-      await supabase
+      // 2. 加入成員紀錄
+      const { error: joinError } = await supabase
         .from("group_members")
-        .upsert([{ user_id: user.id, group_id: group.id }]);
+        .upsert([{ user_id: user.id, group_id: group.id }], {
+          onConflict: "user_id, group_id", // 確保重複加入時不會出錯
+        });
+
+      if (joinError) {
+        alert("加入失敗：" + joinError.message);
+        return;
+      }
+
+      // 3. 成功後的操作
       setCurrentGroup(group);
       fetchMyGroups(user.id);
       fetchVideos(group.id);
-    } else alert("金鑰無效");
+      setInputKey(""); // 清空輸入框
+    } else {
+      // 這裡現在能正確執行了，因為 maybeSingle 沒找到會回傳 null
+      alert("金鑰無效，找不到該頻道！");
+    }
   };
 
   const handleCreateGroup = async () => {
