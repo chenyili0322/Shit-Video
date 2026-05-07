@@ -26,6 +26,7 @@ export default function Home() {
   const [unseenCounts, setUnseenCounts] = useState<Record<string, number>>({});
   // 1. 宣告 avatarBg 狀態，預設為白色
   const [avatarBg, setAvatarBg] = useState("#ffffff");
+  const [currentMembers, setCurrentMembers] = useState<any[]>([]);
 
   useEffect(() => {
     if (!user) return;
@@ -103,9 +104,13 @@ export default function Home() {
   }, [user, currentGroup?.id]); // 確保 currentGroup.id 變動時會重啟監聽
 
   // 當切換群組時，把該群組的未讀數歸零
+  // 找到你原本處理「切換群組時，未讀數歸零」的那個 useEffect
   useEffect(() => {
     if (currentGroup) {
       setUnseenCounts((prev) => ({ ...prev, [currentGroup.id]: 0 }));
+
+      // 補上這行：只要 currentGroup.id 變了，就去抓新成員
+      fetchGroupMembers(currentGroup.id);
     }
   }, [currentGroup?.id]);
   // 登入
@@ -372,6 +377,17 @@ export default function Home() {
       alert("群組已永久刪除");
       setCurrentGroup(null); // 回到大廳
       fetchMyGroups(user.id); // 重新整理側邊欄
+    }
+  };
+  const fetchGroupMembers = async (groupId: string) => {
+    const { data } = await supabase
+      .from("group_members")
+      .select("profiles (display_name, avatar_url, avatar_bg)")
+      .eq("group_id", groupId);
+
+    if (data) {
+      // 攤平資料結構，只保留 profile 的部分
+      setCurrentMembers(data.map((m: any) => m.profiles));
     }
   };
   const handleLogout = async () => {
@@ -683,6 +699,27 @@ export default function Home() {
                     <h2 className="text-3xl font-black italic">
                       {currentGroup.group_name}
                     </h2>
+                    <div className="flex -space-x-2">
+                      {currentMembers.slice(0, 5).map((member, i) => (
+                        <img
+                          key={i}
+                          src={
+                            member.avatar_url ||
+                            `https://api.dicebear.com/7.x/bottts/svg?seed=${i}`
+                          }
+                          style={{
+                            backgroundColor: member.avatar_bg || "#ffffff",
+                          }}
+                          className="w-6 h-6 rounded-full border-2 border-black object-cover"
+                          title={member.display_name}
+                        />
+                      ))}
+                      {currentMembers.length > 5 && (
+                        <span className="text-gray-500 text-xs self-end ml-1">
+                          ...
+                        </span>
+                      )}
+                    </div>
                     <button
                       onClick={() => {
                         navigator.clipboard.writeText(currentGroup.access_key);
