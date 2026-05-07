@@ -24,18 +24,20 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
-@keyframes danmaku {
+@keyframes danmaku-run {
   from {
     transform: translateX(100%);
   }
   to {
-    transform: translateX(-200%);
+    transform: translateX(-200%); /* 確保完全飄出螢幕左側 */
   }
 }
-.danmaku-item {
+
+/* 注意這裡改成了 .danmaku-text */
+.danmaku-text {
   position: absolute;
   white-space: nowrap;
-  animation: danmaku 8s linear infinite;
+  animation: danmaku-run 8s linear infinite; /* 名稱要跟上面的 keyframes 對應 */
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.9);
   font-weight: 900;
   pointer-events: none;
