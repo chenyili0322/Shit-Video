@@ -32,36 +32,32 @@ export default function Home() {
       .channel("global-updates")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "videos" },
+        { event: "*", schema: "public", table: "videos" }, // 監聽所有事件
         (payload) => {
-          console.log("收到變動事件:", payload.eventType, payload);
+          console.log("收到即時變動:", payload.eventType, payload);
 
-          // 1. 處理新增 (INSERT)
+          // 處理新增
           if (payload.eventType === "INSERT") {
             const newVideo = payload.new;
             if (newVideo.group_id === currentGroup?.id) {
-              fetchVideos(currentGroup.id); // 在當前群組：刷畫面
+              fetchVideos(currentGroup.id);
             } else {
               setUnseenCounts((prev) => ({
-                // 不在當前群組：加 💩
                 ...prev,
                 [newVideo.group_id]: (prev[newVideo.group_id] || 0) + 1,
               }));
             }
           }
 
-          // 2. 處理刪除 (DELETE)
+          // 處理刪除
           if (payload.eventType === "DELETE") {
-            // 這裡最重要：刪除的資料在 .old 裡面
-            const oldVideo = payload.old;
-
+            const oldVideo = payload.old; // 刪除的資料在 .old
             if (oldVideo && oldVideo.group_id) {
               if (oldVideo.group_id === currentGroup?.id) {
                 console.log("偵測到當前群組影片刪除，刷新列表");
-                fetchVideos(currentGroup.id); // 在當前群組：刷畫面
+                fetchVideos(currentGroup.id); // 刷新畫面
               } else {
                 setUnseenCounts((prev) => ({
-                  // 不在當前群組：減 💩
                   ...prev,
                   [oldVideo.group_id]: Math.max(
                     0,
@@ -265,7 +261,7 @@ export default function Home() {
       ? `https://www.youtube.com/embed/${videoId}${videoUrl.includes("/shorts/") ? "#shorts" : ""}`
       : null;
     if (!embedUrl) return alert("網址錯誤");
-    if (videoList.some((v) => v.url === embedUrl)) return alert("重複了");
+    if (videoList.some((v) => v.url === embedUrl)) return alert("不是啊，你分享過了餒？");
     await supabase.from("videos").insert([
       {
         url: embedUrl,
@@ -712,14 +708,16 @@ export default function Home() {
                             {user.id === vid.created_by && (
                               <button
                                 onClick={async () => {
-                                  if (confirm("刪除？")) {
-                                    await supabase
+                                  if (confirm("確定要刪除嗎？")) {
+                                    // 執行刪除動作
+                                    const { error } = await supabase
                                       .from("videos")
                                       .delete()
                                       .eq("id", vid.id);
-                                    setVideoList(
-                                      videoList.filter((v) => v.id !== vid.id),
-                                    );
+
+                                    if (error) {
+                                      alert("刪除失敗：" + error.message);
+                                    }
                                   }
                                 }}
                                 className="text-gray-700 hover:text-red-500 cursor-pointer"
