@@ -380,14 +380,36 @@ export default function Home() {
     }
   };
   const fetchGroupMembers = async (groupId: string) => {
-    const { data } = await supabase
+    console.log("正在抓取群組成員，ID:", groupId);
+
+    const { data, error } = await supabase
       .from("group_members")
-      .select("profiles (display_name, avatar_url, avatar_bg)")
+      .select(
+        `
+      profiles:user_id (
+        display_name, 
+        avatar_url, 
+        avatar_bg
+      )
+    `,
+      )
       .eq("group_id", groupId);
 
+    if (error) {
+      console.error("抓取成員失敗:", error.message);
+      return;
+    }
+
     if (data) {
-      // 攤平資料結構，只保留 profile 的部分
-      setCurrentMembers(data.map((m: any) => m.profiles));
+      console.log("原始回傳資料:", data);
+
+      // 確保 m.profiles 存在才放入陣列
+      const members = data
+        .map((m: any) => m.profiles)
+        .filter((profile) => profile !== null);
+
+      console.log("處理後的成員名單:", members);
+      setCurrentMembers(members);
     }
   };
   const handleLogout = async () => {
