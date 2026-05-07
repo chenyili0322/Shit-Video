@@ -269,7 +269,8 @@ export default function Home() {
     const { data } = await supabase
       .from("videos")
       .select(
-        "*, ratings(score, user_id, profiles:user_id(display_name, avatar_url))",
+        // 這裡補上 profiles:created_by(...) 確保抓到作者的背景色
+        "*, profiles:created_by(display_name, avatar_url, avatar_bg), ratings(score, user_id, profiles:user_id(display_name, avatar_url, avatar_bg))",
       )
       .eq("group_id", groupId)
       .order("created_at", { ascending: false });
@@ -412,7 +413,9 @@ export default function Home() {
                   profile.avatar_url ||
                   `https://api.dicebear.com/7.x/bottts/svg?seed=${user.id}`
                 }
-                className="w-10 h-10 rounded-full border border-gray-700 object-cover bg-gray-100 shadow-[0_0_10px_rgba(255,255,255,0.1)]"
+                // 加上這行！
+                style={{ backgroundColor: profile.avatar_bg || "#ffffff" }}
+                className="w-10 h-10 rounded-full border border-gray-700 object-cover shadow-[0_0_10px_rgba(255,255,255,0.1)]"
               />
             </div>
             {/* 登出圖示按鈕 */}
@@ -830,6 +833,11 @@ export default function Home() {
                                     r.profiles?.avatar_url ||
                                     `https://api.dicebear.com/7.x/bottts/svg?seed=${r.user_id}`
                                   }
+                                  // 加上這行！
+                                  style={{
+                                    backgroundColor:
+                                      r.profiles?.avatar_bg || "#ffffff",
+                                  }}
                                   className="w-4 h-4 rounded-full shadow-[0_0_10px_rgba(255,255,255,0.1)]"
                                 />
                                 <span className="text-gray-400 font-bold">
