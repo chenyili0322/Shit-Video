@@ -75,6 +75,29 @@ export default function Home() {
       setUnseenCounts((prev) => ({ ...prev, [currentGroup.id]: 0 }));
     }
   }, [currentGroup?.id]);
+  // 登入
+  useEffect(() => {
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    if (session?.user) {
+      setUser(session.user);
+      fetchProfile(session.user.id);
+      fetchMyGroups(session.user.id);
+    }
+  });
+
+  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    if (session?.user) {
+      setUser(session.user);
+      fetchProfile(session.user.id);
+      fetchMyGroups(session.user.id);
+    } else {
+      setUser(null);
+      setProfile(null);
+    }
+  });
+
+  return () => subscription.unsubscribe();
+}, []);
 
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
