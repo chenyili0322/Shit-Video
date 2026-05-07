@@ -26,31 +26,48 @@ export default function Home() {
   const [unseenCounts, setUnseenCounts] = useState<Record<string, number>>({});
   // 監聽登入狀態變化
   useEffect(() => {
-    // 1. 初始化檢查
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        setUser(session.user);
-        fetchProfile(session.user.id);
-        fetchMyGroups(session.user.id);
-      }
-    });
+    // 1. 確保有使用者才開始監聽
+    if (!user) return;
 
-    // 2. 監聽後續狀態變化 (登入、登出)
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        setUser(session.user);
-        fetchProfile(session.user.id);
-        fetchMyGroups(session.user.id);
-      } else {
-        setUser(null);
-        setProfile(null);
-      }
-    });
+    const channel = supabase
+      .channel("global-updates")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "videos",
+        },
+        (payload) => {
+          const newVideo = payload.new;
 
-    return () => subscription.unsubscribe();
-  }, []);
+          // 這裡有個陷阱：如果直接用 useEffect 外層的 myGroups，
+          // 監聽器內的 myGroups 可能還是舊的空陣列。
+          // 我們改用「函式更新」來獲取最新狀態，或是直接在這裡處理邏輯。
+
+          setUnseenCounts((prev) => {
+            // 只有當新影片不屬於當前正在看的群組時，才增加通知
+            if (newVideo.group_id !== currentGroup?.id) {
+              return {
+                ...prev,
+                [newVideo.group_id]: (prev[newVideo.group_id] || 0) + 1,
+              };
+            }
+            return prev;
+          });
+
+          // 如果是當前群組，直接刷新列表
+          if (newVideo.group_id === currentGroup?.id) {
+            fetchVideos(currentGroup.id);
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, currentGroup?.id]); // 這裡移除 myGroups 依賴，改用邏輯判斷
 
   // 當切換群組時，把該群組的未讀數歸零
   useEffect(() => {
@@ -271,9 +288,7 @@ export default function Home() {
   };
   const handleLogout = async () => {
     // 第一層防呆：彈出對話框
-    const singleCheck = window.confirm(
-      "確定要登出嗎？",
-    );
+    const singleCheck = window.confirm("確定要登出嗎？");
 
     if (!singleCheck) return; // 使用者按取消，直接結束
 
