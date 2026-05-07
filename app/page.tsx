@@ -262,7 +262,8 @@ export default function Home() {
       ? `https://www.youtube.com/embed/${videoId}${videoUrl.includes("/shorts/") ? "#shorts" : ""}`
       : null;
     if (!embedUrl) return alert("網址錯誤");
-    if (videoList.some((v) => v.url === embedUrl)) return alert("不是啊，你分享過了餒？");
+    if (videoList.some((v) => v.url === embedUrl))
+      return alert("不是啊，你分享過了餒？");
     await supabase.from("videos").insert([
       {
         url: embedUrl,
@@ -709,8 +710,8 @@ export default function Home() {
                             {user.id === vid.created_by && (
                               <button
                                 onClick={async () => {
-                                  if (confirm("確定要刪除嗎？")) {
-                                    // 執行刪除動作
+                                  if (confirm("確定要毀屍滅跡嗎？")) {
+                                    // 1. 先執行資料庫刪除
                                     const { error } = await supabase
                                       .from("videos")
                                       .delete()
@@ -718,7 +719,16 @@ export default function Home() {
 
                                     if (error) {
                                       alert("刪除失敗：" + error.message);
+                                      return;
                                     }
+
+                                    // 2. 針對「刪除者本人」：直接更新本地 state，體感最快
+                                    setVideoList((prev) =>
+                                      prev.filter((v) => v.id !== vid.id),
+                                    );
+
+                                    // 至於「旁觀者」：他們會透過 useEffect 裡的 Realtime 收到 DELETE 訊號
+                                    // 進而觸發 fetchVideos，這部分邏輯保持不變。
                                   }
                                 }}
                                 className="text-gray-700 hover:text-red-500 cursor-pointer"
