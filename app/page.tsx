@@ -32,40 +32,46 @@ export default function Home() {
       .channel("global-updates")
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "videos" }, // 監聽所有事件
+        { event: "*", schema: "public", table: "videos" },
         (payload) => {
-          console.log("收到即時變動:", payload.eventType, payload);
+          console.log("收到變動:", payload.eventType, payload);
 
-          // 處理新增
           if (payload.eventType === "INSERT") {
             const newVideo = payload.new;
-            if (newVideo.group_id === currentGroup?.id) {
+            // 這裡用 prev 確保拿到最新狀態
+            setUnseenCounts((prev) => {
+              // 只有不在當前群組時才加 💩
+              if (newVideo.group_id !== currentGroup?.id) {
+                return {
+                  ...prev,
+                  [newVideo.group_id]: (prev[newVideo.group_id] || 0) + 1,
+                };
+              }
+              return prev;
+            });
+            if (newVideo.group_id === currentGroup?.id)
               fetchVideos(currentGroup.id);
-            } else {
-              setUnseenCounts((prev) => ({
-                ...prev,
-                [newVideo.group_id]: (prev[newVideo.group_id] || 0) + 1,
-              }));
-            }
           }
 
-          // 處理刪除
           if (payload.eventType === "DELETE") {
-            const oldVideo = payload.old; // 刪除的資料在 .old
-            console.log("被刪除的舊資料內容:", oldVideo); // 👈 檢查這裡有沒有 group_id
+            const oldVideo = payload.old;
+            // 檢查 payload.old 是否真的拿到了 group_id
             if (oldVideo && oldVideo.group_id) {
+              setUnseenCounts((prev) => ({
+                ...prev,
+                [oldVideo.group_id]: Math.max(
+                  0,
+                  (prev[oldVideo.group_id] || 0) - 1,
+                ),
+              }));
+
               if (oldVideo.group_id === currentGroup?.id) {
-                console.log("偵測到當前群組影片刪除，刷新列表");
-                fetchVideos(currentGroup.id); // 刷新畫面
-              } else {
-                setUnseenCounts((prev) => ({
-                  ...prev,
-                  [oldVideo.group_id]: Math.max(
-                    0,
-                    (prev[oldVideo.group_id] || 0) - 1,
-                  ),
-                }));
+                fetchVideos(currentGroup.id);
               }
+            } else {
+              // 如果執行了 FULL 但還是拿不到，就嘗試直接刷新當前畫面
+              console.warn("Delete payload 缺漏 group_id，執行強制刷新");
+              if (currentGroup) fetchVideos(currentGroup.id);
             }
           }
         },
@@ -75,7 +81,7 @@ export default function Home() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, currentGroup?.id]);
+  }, [user, currentGroup?.id]); // 確保 currentGroup.id 變動時會重啟監聽
 
   // 當切換群組時，把該群組的未讀數歸零
   useEffect(() => {
@@ -710,25 +716,20 @@ export default function Home() {
                             {user.id === vid.created_by && (
                               <button
                                 onClick={async () => {
-                                  if (confirm("確定要毀屍滅跡嗎？")) {
-                                    // 1. 先執行資料庫刪除
+                                  if (confirm("確定要刪除嗎？")) {
                                     const { error } = await supabase
                                       .from("videos")
                                       .delete()
                                       .eq("id", vid.id);
 
-                                    if (error) {
+                                    if (!error) {
+                                      // 關鍵：刪除成功後，立刻手動更新本人的列表
+                                      setVideoList((prev) =>
+                                        prev.filter((v) => v.id !== vid.id),
+                                      );
+                                    } else {
                                       alert("刪除失敗：" + error.message);
-                                      return;
                                     }
-
-                                    // 2. 針對「刪除者本人」：直接更新本地 state，體感最快
-                                    setVideoList((prev) =>
-                                      prev.filter((v) => v.id !== vid.id),
-                                    );
-
-                                    // 至於「旁觀者」：他們會透過 useEffect 裡的 Realtime 收到 DELETE 訊號
-                                    // 進而觸發 fetchVideos，這部分邏輯保持不變。
                                   }
                                 }}
                                 className="text-gray-700 hover:text-red-500 cursor-pointer"
