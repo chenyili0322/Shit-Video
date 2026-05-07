@@ -24,9 +24,8 @@ export default function Home() {
   const [tags, setTags] = useState("");
   const [videoList, setVideoList] = useState<any[]>([]);
   const [unseenCounts, setUnseenCounts] = useState<Record<string, number>>({});
-  // 監聽登入狀態變化
+  
   useEffect(() => {
-    // 1. 確保有使用者才開始監聽
     if (!user) return;
 
     const channel = supabase
@@ -34,31 +33,46 @@ export default function Home() {
       .on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*", // 關鍵：改為監聽所有事件 (INSERT, DELETE, UPDATE)
           schema: "public",
           table: "videos",
         },
         (payload) => {
-          const newVideo = payload.new;
-
-          // 這裡有個陷阱：如果直接用 useEffect 外層的 myGroups，
-          // 監聽器內的 myGroups 可能還是舊的空陣列。
-          // 我們改用「函式更新」來獲取最新狀態，或是直接在這裡處理邏輯。
-
-          setUnseenCounts((prev) => {
-            // 只有當新影片不屬於當前正在看的群組時，才增加通知
-            if (newVideo.group_id !== currentGroup?.id) {
-              return {
-                ...prev,
-                [newVideo.group_id]: (prev[newVideo.group_id] || 0) + 1,
-              };
+          // 處理新增影片
+          if (payload.eventType === "INSERT") {
+            const newVideo = payload.new;
+            setUnseenCounts((prev) => {
+              if (newVideo.group_id !== currentGroup?.id) {
+                return {
+                  ...prev,
+                  [newVideo.group_id]: (prev[newVideo.group_id] || 0) + 1,
+                };
+              }
+              return prev;
+            });
+            if (newVideo.group_id === currentGroup?.id) {
+              fetchVideos(currentGroup.id);
             }
-            return prev;
-          });
+          }
 
-          // 如果是當前群組，直接刷新列表
-          if (newVideo.group_id === currentGroup?.id) {
-            fetchVideos(currentGroup.id);
+          // 處理刪除影片
+          else if (payload.eventType === "DELETE") {
+            // 注意：刪除時資料在 payload.old 裡面
+            const oldVideo = payload.old;
+            if (oldVideo && oldVideo.group_id) {
+              setUnseenCounts((prev) => ({
+                ...prev,
+                [oldVideo.group_id]: Math.max(
+                  0,
+                  (prev[oldVideo.group_id] || 0) - 1,
+                ),
+              }));
+
+              // 如果剛好是正在看的群組被刪除，也要刷新列表
+              if (oldVideo.group_id === currentGroup?.id) {
+                fetchVideos(currentGroup.id);
+              }
+            }
           }
         },
       )
@@ -67,7 +81,7 @@ export default function Home() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, currentGroup?.id]); // 這裡移除 myGroups 依賴，改用邏輯判斷
+  }, [user, currentGroup?.id]);
 
   // 當切換群組時，把該群組的未讀數歸零
   useEffect(() => {
@@ -77,27 +91,29 @@ export default function Home() {
   }, [currentGroup?.id]);
   // 登入
   useEffect(() => {
-  supabase.auth.getSession().then(({ data: { session } }) => {
-    if (session?.user) {
-      setUser(session.user);
-      fetchProfile(session.user.id);
-      fetchMyGroups(session.user.id);
-    }
-  });
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser(session.user);
+        fetchProfile(session.user.id);
+        fetchMyGroups(session.user.id);
+      }
+    });
 
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-    if (session?.user) {
-      setUser(session.user);
-      fetchProfile(session.user.id);
-      fetchMyGroups(session.user.id);
-    } else {
-      setUser(null);
-      setProfile(null);
-    }
-  });
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+        fetchProfile(session.user.id);
+        fetchMyGroups(session.user.id);
+      } else {
+        setUser(null);
+        setProfile(null);
+      }
+    });
 
-  return () => subscription.unsubscribe();
-}, []);
+    return () => subscription.unsubscribe();
+  }, []);
 
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
