@@ -24,6 +24,8 @@ export default function Home() {
   const [tags, setTags] = useState("");
   const [videoList, setVideoList] = useState<any[]>([]);
   const [unseenCounts, setUnseenCounts] = useState<Record<string, number>>({});
+  // 1. 宣告 avatarBg 狀態，預設為白色
+  const [avatarBg, setAvatarBg] = useState("#ffffff");
 
   useEffect(() => {
     if (!user) return;
@@ -84,7 +86,7 @@ export default function Home() {
           if (currentGroup?.id) {
             fetchVideos(currentGroup.id); // 只要有人評分，就重新抓取目前群組的影片資料
           }
-        }
+        },
       )
       .subscribe();
 
@@ -125,6 +127,7 @@ export default function Home() {
     return () => subscription.unsubscribe();
   }, []);
 
+  // 2. 確保 fetchProfile 時也會把顏色抓回來
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
       .from("profiles")
@@ -135,6 +138,7 @@ export default function Home() {
       setProfile(data);
       setTempName(data.display_name || "");
       setAvatarUrl(data.avatar_url || "");
+      setAvatarBg(data.avatar_bg || "#ffffff"); // 補上這行，把資料庫的顏色讀出來
     }
   };
 
@@ -164,11 +168,15 @@ export default function Home() {
       id: user.id,
       display_name: tempName,
       avatar_url: avatarUrl,
+      avatar_bg: avatarBg, // 存入顏色
       updated_at: new Date(),
     });
+
     if (!error) {
       await fetchProfile(user.id);
       setIsEditingProfile(false);
+    } else {
+      alert("儲存失敗: " + error.message);
     }
   };
 
@@ -510,17 +518,21 @@ export default function Home() {
             ) : isEditingProfile || !profile ? (
               <div className="bg-gray-900 p-8 rounded-[3rem] border border-yellow-500 shadow-2xl text-center">
                 <h2 className="text-2xl font-black mb-8">設定檔案</h2>
+
+                {/* 頭像預覽區 */}
                 <div className="relative w-24 h-24 mx-auto mb-8 group cursor-pointer">
                   <img
                     src={
                       avatarUrl ||
                       `https://api.dicebear.com/7.x/bottts/svg?seed=${user.id}`
                     }
-                    className="w-full h-full rounded-full bg-black border-2 border-gray-800 object-cover shadow-[0_0_10px_rgba(255,255,255,0.1)]"
+                    // 這裡動態套用選擇的背景顏色
+                    style={{ backgroundColor: avatarBg }}
+                    className="w-full h-full rounded-full border-2 border-gray-800 object-cover shadow-[0_0_10px_rgba(255,255,255,0.1)] transition-colors"
                   />
                   <label className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition">
                     <span className="text-[10px] font-bold">
-                      {uploading ? "傳送中" : "更換"}
+                      {uploading ? "傳送中" : "更換圖檔"}
                     </span>
                     <input
                       type="file"
@@ -530,18 +542,39 @@ export default function Home() {
                     />
                   </label>
                 </div>
+
+                {/* 顏色選擇區 */}
+                <div className="mb-6">
+                  <p className="text-[10px] text-gray-500 uppercase font-black tracking-widest mb-2">
+                    背景顏色
+                  </p>
+                  <div className="flex items-center gap-3 bg-black p-3 rounded-2xl border border-gray-800">
+                    <input
+                      type="color"
+                      value={avatarBg}
+                      onChange={(e) => setAvatarBg(e.target.value)}
+                      className="w-10 h-10 bg-transparent border-none cursor-pointer"
+                    />
+                    <span className="text-xs font-mono text-gray-400 uppercase">
+                      {avatarBg}
+                    </span>
+                  </div>
+                </div>
+
                 <input
                   className="w-full bg-black p-5 rounded-2xl text-center border border-gray-800 mb-4 outline-none focus:border-yellow-500"
                   placeholder="你的暱稱"
                   value={tempName}
                   onChange={(e) => setTempName(e.target.value)}
                 />
+
                 <button
                   onClick={handleSaveProfile}
-                  className="w-full bg-yellow-500 text-black font-black p-5 rounded-2xl cursor-pointer"
+                  className="w-full bg-yellow-500 text-black font-black p-5 rounded-2xl cursor-pointer hover:bg-yellow-400 transition"
                 >
                   儲存
                 </button>
+
                 {profile && (
                   <button
                     onClick={() => setIsEditingProfile(false)}
