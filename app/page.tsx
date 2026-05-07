@@ -52,6 +52,7 @@ export default function Home() {
           // 處理刪除
           if (payload.eventType === "DELETE") {
             const oldVideo = payload.old; // 刪除的資料在 .old
+            console.log("被刪除的舊資料內容:", oldVideo); // 👈 檢查這裡有沒有 group_id
             if (oldVideo && oldVideo.group_id) {
               if (oldVideo.group_id === currentGroup?.id) {
                 console.log("偵測到當前群組影片刪除，刷新列表");
