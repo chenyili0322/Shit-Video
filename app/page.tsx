@@ -24,46 +24,33 @@ export default function Home() {
   const [tags, setTags] = useState("");
   const [videoList, setVideoList] = useState<any[]>([]);
   const [unseenCounts, setUnseenCounts] = useState<Record<string, number>>({});
+  // 監聽登入狀態變化
   useEffect(() => {
-    if (!user || myGroups.length === 0) return;
+    // 1. 初始化檢查
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser(session.user);
+        fetchProfile(session.user.id);
+        fetchMyGroups(session.user.id);
+      }
+    });
 
-    const groupIds = myGroups.map((g) => g.id);
+    // 2. 監聽後續狀態變化 (登入、登出)
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser(session.user);
+        fetchProfile(session.user.id);
+        fetchMyGroups(session.user.id);
+      } else {
+        setUser(null);
+        setProfile(null);
+      }
+    });
 
-    const channel = supabase
-      .channel("global-updates")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "videos",
-        },
-        (payload) => {
-          const newVideoGroupId = payload.new.group_id;
-
-          // 如果新影片是在「我的群組」之一，且「不是我目前正在看」的那個
-          if (
-            groupIds.includes(newVideoGroupId) &&
-            newVideoGroupId !== currentGroup?.id
-          ) {
-            setUnseenCounts((prev) => ({
-              ...prev,
-              [newVideoGroupId]: (prev[newVideoGroupId] || 0) + 1,
-            }));
-          }
-
-          // 如果剛好是我正在看的群組，就直接更新列表
-          if (newVideoGroupId === currentGroup?.id) {
-            fetchVideos(currentGroup.id);
-          }
-        },
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [myGroups, currentGroup?.id]);
+    return () => subscription.unsubscribe();
+  }, []);
 
   // 當切換群組時，把該群組的未讀數歸零
   useEffect(() => {
@@ -120,11 +107,19 @@ export default function Home() {
   };
 
   const fetchMyGroups = async (userId: string) => {
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from("group_members")
       .select("groups (*)")
       .eq("user_id", userId);
-    if (data) setMyGroups(data.map((item: any) => item.groups));
+
+    if (error) {
+      console.error(error);
+      return;
+    }
+
+    // 確保只取出 groups 的部分，並過濾掉可能的空值
+    const groups = data?.map((item: any) => item.groups).filter(Boolean) || [];
+    setMyGroups(groups);
   };
 
   const handleJoinGroup = async () => {
