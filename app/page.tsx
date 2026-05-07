@@ -23,16 +23,54 @@ export default function Home() {
   const [videoUrl, setVideoUrl] = useState("");
   const [tags, setTags] = useState("");
   const [videoList, setVideoList] = useState<any[]>([]);
-
+  const [unseenCounts, setUnseenCounts] = useState<Record<string, number>>({});
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user);
-      if (user) {
-        fetchProfile(user.id);
-        fetchMyGroups(user.id);
-      }
-    });
-  }, []);
+    if (!user || myGroups.length === 0) return;
+
+    const groupIds = myGroups.map((g) => g.id);
+
+    const channel = supabase
+      .channel("global-updates")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "videos",
+        },
+        (payload) => {
+          const newVideoGroupId = payload.new.group_id;
+
+          // 如果新影片是在「我的群組」之一，且「不是我目前正在看」的那個
+          if (
+            groupIds.includes(newVideoGroupId) &&
+            newVideoGroupId !== currentGroup?.id
+          ) {
+            setUnseenCounts((prev) => ({
+              ...prev,
+              [newVideoGroupId]: (prev[newVideoGroupId] || 0) + 1,
+            }));
+          }
+
+          // 如果剛好是我正在看的群組，就直接更新列表
+          if (newVideoGroupId === currentGroup?.id) {
+            fetchVideos(currentGroup.id);
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [myGroups, currentGroup?.id]);
+
+  // 當切換群組時，把該群組的未讀數歸零
+  useEffect(() => {
+    if (currentGroup) {
+      setUnseenCounts((prev) => ({ ...prev, [currentGroup.id]: 0 }));
+    }
+  }, [currentGroup?.id]);
 
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
@@ -293,10 +331,29 @@ export default function Home() {
                   setCurrentGroup(g);
                   fetchVideos(g.id);
                   setIsSidebarOpen(false);
+                  // ... 這裡如果有 setGeneratedKey("") 也保留
                 }}
-                className={`p-3 rounded-2xl text-left text-sm font-bold transition cursor-pointer ${currentGroup?.id === g.id ? "bg-yellow-500 text-black shadow-lg" : "hover:bg-gray-800 text-gray-500"}`}
+                className={`p-3 rounded-2xl text-left text-sm font-bold flex justify-between items-center transition ${
+                  currentGroup?.id === g.id
+                    ? "bg-yellow-500 text-black shadow-lg"
+                    : "hover:bg-gray-800 text-gray-500"
+                }`}
               >
-                # {g.group_name}
+                {/* 群組名稱 */}
+                <span className="truncate mr-2"># {g.group_name}</span>
+
+                {/* 💩 大便新消息提示 💩 */}
+                {unseenCounts[g.id] > 0 && (
+                  <div className="relative flex items-center justify-center flex-shrink-0 animate-pulse-slow">
+                    {/* 大便 Emoji 本體 - 這裡調大一點 */}
+                    <span className="text-xl">💩</span>
+
+                    {/* 咖啡色數字 - 放在大便旁邊 */}
+                    <span className="absolute -top-1 -right-1 bg-black/80 text-[#8B4513] text-[10px] font-extrabold px-1.5 py-0.5 rounded-full border border-gray-800 min-w-[18px] text-center shadow-lg">
+                      {unseenCounts[g.id]}
+                    </span>
+                  </div>
+                )}
               </button>
             ))}
           </nav>
