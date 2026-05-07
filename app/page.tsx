@@ -851,15 +851,26 @@ export default function Home() {
                           <div className="mb-6 px-2">
                             <div className="relative">
                               <input
-                                className="w-full bg-black border border-gray-800 rounded-2xl py-3 px-4 text-sm outline-none focus:border-blue-500 transition-all pr-12"
-                                placeholder="發射彈幕吐槽..."
+                                // 1. 加上 disabled 判斷
+                                disabled={user.id === vid.created_by}
+                                className={`w-full bg-black border rounded-2xl py-3 px-4 text-sm outline-none transition-all pr-12 ${
+                                  user.id === vid.created_by
+                                    ? "border-gray-900 text-gray-700 cursor-not-allowed opacity-50"
+                                    : "border-gray-800 focus:border-blue-500"
+                                }`}
+                                // 2. 提示文字切換
+                                placeholder={
+                                  user.id === vid.created_by
+                                    ? "不能在自己的影片發彈幕喔 💩"
+                                    : "發射彈幕吐槽..."
+                                }
                                 onKeyDown={async (e) => {
                                   if (
                                     e.key === "Enter" &&
                                     e.currentTarget.value.trim()
                                   ) {
                                     const content = e.currentTarget.value;
-                                    const inputNode = e.currentTarget; // 先抓著節點
+                                    const inputNode = e.currentTarget;
 
                                     const { error } = await supabase
                                       .from("comments")
@@ -872,17 +883,19 @@ export default function Home() {
                                       ]);
 
                                     if (!error) {
-                                      inputNode.value = ""; // 清空輸入框
-                                      // 因為我們有 Realtime 監聽，fetchVideos 會自動被觸發
+                                      inputNode.value = "";
                                     } else {
                                       alert("彈幕發射失敗：" + error.message);
                                     }
                                   }
                                 }}
                               />
-                              <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-600">
-                                ENTER
-                              </div>
+                              {/* 3. 右側 ENTER 圖示根據狀態隱藏 */}
+                              {user.id !== vid.created_by && (
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-600">
+                                  ENTER
+                                </div>
+                              )}
                             </div>
                           </div>
                           <div className="flex items-center justify-between pt-8 border-t border-gray-800/50">
