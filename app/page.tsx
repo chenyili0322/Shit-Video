@@ -27,6 +27,8 @@ export default function Home() {
   // 1. 宣告 avatarBg 狀態，預設為白色
   const [avatarBg, setAvatarBg] = useState("#ffffff");
   const [currentMembers, setCurrentMembers] = useState<any[]>([]);
+  const [playingVideoId, setPlayingVideoId] = useState<string | null>(null);
+  const [activeDanmakuId, setActiveDanmakuId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -838,49 +840,95 @@ export default function Home() {
                 <div className="space-y-16">
                   {videoList.map((vid) => {
                     const isShorts = vid.url.includes("#shorts");
+                    // 提取 YouTube ID 用於抓取縮圖
+                    const ytId = vid.url
+                      .split("/embed/")[1]
+                      ?.split("?")[0]
+                      ?.split("#")[0];
+                    const isPlaying = playingVideoId === vid.id;
+                    const showDanmaku = activeDanmakuId === vid.id;
+
                     return (
                       <div
                         key={vid.id}
                         className="bg-gray-900 rounded-[3rem] overflow-hidden border border-gray-800 shadow-2xl"
                       >
                         <div
-                          className="mx-auto bg-black relative overflow-hidden"
+                          className="mx-auto bg-black relative overflow-hidden group cursor-pointer"
                           style={{
                             width: "100%",
                             maxWidth: isShorts ? "360px" : "100%",
                             aspectRatio: isShorts ? "9/16" : "16/9",
                           }}
+                          onClick={() => {
+                            if (!isPlaying) {
+                              setPlayingVideoId(vid.id);
+                              // 3 秒後才開啟彈幕
+                              setTimeout(() => {
+                                setActiveDanmakuId(vid.id);
+                              }, 3000);
+                            }
+                          }}
                         >
-                          <iframe
-                            width="100%"
-                            height="100%"
-                            src={vid.url}
-                            frameBorder="0"
-                            allowFullScreen
-                            className="relative z-0"
-                          ></iframe>
+                          {isPlaying ? (
+                            <iframe
+                              width="100%"
+                              height="100%"
+                              src={`${vid.url}${vid.url.includes("?") ? "&" : "?"}autoplay=1`}
+                              frameBorder="0"
+                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                              allowFullScreen
+                              className="relative z-0"
+                            ></iframe>
+                          ) : (
+                            /* 預覽縮圖層 */
+                            <div className="relative w-full h-full">
+                              <img
+                                src={`https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`}
+                                className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity"
+                                onError={(e) => {
+                                  // 如果沒有高畫質縮圖，換成一般畫質
+                                  (e.target as HTMLImageElement).src =
+                                    `https://img.youtube.com/vi/${ytId}/mqdefault.jpg`;
+                                }}
+                              />
+                              {/* 播放按鈕圖示 */}
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                                  <svg
+                                    width="32"
+                                    height="32"
+                                    viewBox="0 0 24 24"
+                                    fill="white"
+                                  >
+                                    <path d="M8 5v14l11-7z" />
+                                  </svg>
+                                </div>
+                              </div>
+                            </div>
+                          )}
 
-                          {/* 彈幕層 - B站風排版 */}
-                          <div className="absolute inset-0 z-10 pointer-events-none">
-                            {vid.comments?.map((c: any, index: number) => {
-                              // 模擬軌道：每支影片分 8 個軌道
-                              const track = index % 8;
-                              return (
-                                <span
-                                  key={c.id}
-                                  className="danmaku-item text-base md:text-lg"
-                                  style={{
-                                    top: `${track * 10 + 5}%`, // 每個軌道佔 10% 高度
-                                    // 讓越新的留言 (index 越小) 越晚出來，或者根據 index 分配延遲
-                                    animationDelay: `${index * 2}s`,
-                                    animationDuration: "10s", // 飄動速度
-                                  }}
-                                >
-                                  {c.content}
-                                </span>
-                              );
-                            })}
-                          </div>
+                          {/* 彈幕層 - 加上 showDanmaku 判斷 */}
+                          {showDanmaku && (
+                            <div className="absolute inset-0 z-10 pointer-events-none">
+                              {vid.comments?.map((c: any, index: number) => {
+                                const track = index % 8;
+                                return (
+                                  <span
+                                    key={c.id}
+                                    className="danmaku-item text-base md:text-lg"
+                                    style={{
+                                      top: `${track * 10 + 5}%`,
+                                      animationDelay: `${index * 1.5}s`, // 稍微加快間隔
+                                      animationDuration: "10s",
+                                    }}
+                                  >
+                                    {c.content}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                         <div className="p-8">
                           {/* 發布者資訊區 */}
