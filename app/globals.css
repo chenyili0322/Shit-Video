@@ -39,24 +39,27 @@ body {
   pointer-events: none;
   font-weight: 900;
   z-index: 50;
-  color: #ffffff; /* 保持白色填充 */
+  color: #ffffff;
 
-  /* 1. 徹底停用會導致筆畫露餡的屬性 */
+  /* --- 關鍵補強：初始位置 --- */
+  /* 確保彈幕在動畫開始前，絕對不會出現在螢幕內 */
+  left: 100%;
+  /* ----------------------- */
+
   -webkit-text-stroke: unset !important;
 
-  /* 2. 改用四個方向的細微陰影來模擬「黑邊」 */
-  /* 這樣字體看起來會很紮實，筆畫內部也不會出線 */
   text-shadow:
     1.5px 1.5px 0px rgba(0, 0, 0, 0.9),
     -1px -1px 0px rgba(0, 0, 0, 0.9),
     1px -1px 0px rgba(0, 0, 0, 0.9),
     -1px 1px 0px rgba(0, 0, 0, 0.9);
 
-  /* 3. 優化移動性能 */
   will-change: transform;
-  transform: translateZ(0);
 
-  animation: danmaku-run 8s linear infinite;
+  /* 注意：這裡建議移除 transform: translateZ(0)，因為動畫裡面通常會用到 transform */
+  /* 如果這裡寫死，可能會跟動畫的 transform 衝突 */
+
+  animation: danmaku-run 8s linear forwards; /* 通常彈幕跑完就消失，建議用 forwards */
 }
 /* app/globals.css */
 @layer utilities {
