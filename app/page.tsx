@@ -846,13 +846,15 @@ export default function Home() {
                       ?.split("?")[0]
                       ?.split("#")[0];
                     const isPlaying = playingVideoId === vid.id;
+                    // 只有當這個影片是被啟動的，且「開關」被打開時才顯示彈幕
+                    const canShowDanmaku =
+                      isPlaying && activeDanmakuId === vid.id;
 
                     return (
                       <div
                         key={vid.id}
                         className="bg-gray-900 rounded-[3rem] overflow-hidden border border-gray-800 shadow-2xl"
                       >
-                        {/* 影片容器 */}
                         <div
                           className="mx-auto bg-black relative overflow-hidden group cursor-pointer"
                           style={{
@@ -863,25 +865,30 @@ export default function Home() {
                           onClick={() => {
                             if (!isPlaying) {
                               setPlayingVideoId(vid.id);
+                              // 點擊時先關閉舊的彈幕開關，確保重新開始
+                              setActiveDanmakuId(null);
                             }
                           }}
                         >
-                          {/* 【第一層：影片或縮圖】 */}
                           {isPlaying ? (
                             <YouTube
-                              videoId={ytId} // 只需要傳 ID，例如: dQw4w9WgXcQ
+                              videoId={ytId}
                               opts={{
                                 width: "100%",
                                 height: "100%",
                                 playerVars: {
-                                  autoplay: 1, // 自動播放
-                                  mute: 0, // 靜音（保證自動播放成功）
-                                  rel: 0, // 不顯示相關影片
+                                  autoplay: 1,
+                                  mute: 0, // 如果要自動播放，有些瀏覽器建議 1，但手動點擊通常 0 也可以
+                                  rel: 0,
                                   modestbranding: 1,
                                 },
                               }}
+                              onPlay={() => {
+                                // 重點：當 YouTube 真正開始「動」的那一刻，才啟動彈幕
+                                // 這樣就不會有一按下就跳出來的問題
+                                setActiveDanmakuId(vid.id);
+                              }}
                               onReady={(event) => {
-                                // 播放器準備好後，強制再下一次播放指令
                                 event.target.playVideo();
                               }}
                               className="absolute inset-0 w-full h-full"
@@ -911,15 +918,14 @@ export default function Home() {
                             </div>
                           )}
 
-                          {/* 【第二層：彈幕層】獨立出來，不被上面的 isPlaying 影響 */}
-                          {isPlaying && (
+                          {/* 彈幕層：只在影片真正開始 Play 後才渲染 */}
+                          {canShowDanmaku && (
                             <div className="absolute inset-0 z-10 pointer-events-none">
                               {vid.comments?.map((c: any, index: number) => {
                                 const track = index % 8;
-
-                                // 這裡計算「總延遲」
-                                // 基礎延遲 1s (等影片跑) + 彈幕排序延遲 (index * 0.5s)
-                                const totalDelay = 1 + index * 0.5;
+                                // 既然影片已經開始跑了，這裡的 Delay 就要縮短，不然又要等很久
+                                const initialDelay = 0.5; // 影片開始半秒後就噴第一條
+                                const interval = 0.8; // 每條間隔 0.8 秒
 
                                 return (
                                   <span
@@ -927,7 +933,7 @@ export default function Home() {
                                     className="danmaku-item text-base md:text-lg"
                                     style={{
                                       top: `${track * 10 + 5}%`,
-                                      animationDelay: `${totalDelay}s`, // 直接寫入計算後的秒數
+                                      animationDelay: `${initialDelay + index * interval}s`,
                                       animationDuration: "10s",
                                     }}
                                   >
