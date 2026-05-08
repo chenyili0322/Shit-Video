@@ -58,3 +58,19 @@ body {
 
   animation: danmaku-run 8s linear infinite;
 }
+/* app/globals.css */
+@layer utilities {
+  .scrollbar-stable {
+    /* 核心屬性：預留滾動條空間，防止內容跳動 */
+    scrollbar-gutter: stable;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background-color: #222;
+    border-radius: 10px;
+  }
+}

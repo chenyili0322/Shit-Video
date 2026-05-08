@@ -447,7 +447,7 @@ export default function Home() {
     window.location.reload();
   };
   return (
-    <div className="min-h-screen bg-black text-white flex flex-col">
+    <div className="h-full bg-black text-white flex flex-col">
       {/* 1. 手機版 & 電腦版通用頂部導覽列 */}
       {user && profile && (
         <header className="sticky top-0 z-50 bg-black/80 backdrop-blur-md border-b border-gray-800 p-4 flex items-center justify-between">
@@ -523,7 +523,6 @@ export default function Home() {
           </div>
         </header>
       )}
-
       <div className="flex flex-1 overflow-hidden">
         {/* 2. 抽屜式側邊欄 (側邊滑入) */}
         <aside
@@ -586,7 +585,7 @@ export default function Home() {
         )}
 
         {/* 3. 主畫面內容 */}
-        <main className="flex-1 overflow-y-auto p-4 py-8">
+        <main className="flex-1 overflow-y-auto p-4 py-8 scrollbar-stable custom-scrollbar">
           <div className="max-w-xl mx-auto">
             {!user ? (
               <div className="text-center mt-20">
