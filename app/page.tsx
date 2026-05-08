@@ -945,8 +945,8 @@ export default function Home() {
                                     className="danmaku-item text-base md:text-lg"
                                     style={{
                                       top: `${randomTop}%`,
-                                      animationDelay: `${totalDelay}s`,
-                                      animationDuration: `${randomDuration}s`, // 蓋掉 CSS 寫死的 10s
+                                      // 順序：名稱 時長 曲線 延遲 停留在終點
+                                      animation: `danmaku-run ${randomDuration}s linear ${totalDelay}s forwards`,
                                     }}
                                   >
                                     {c.content}
