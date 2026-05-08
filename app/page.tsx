@@ -34,13 +34,47 @@ export default function Home() {
   // 記錄資料庫抓回來的最後發送時間 { [receiver_id]: last_created_at }
   const [dbCooldowns, setDbCooldowns] = useState<Record<string, string>>({});
   const [now, setNow] = useState(Date.now());
+  const [poopDrops, setPoopDrops] = useState<
+    { id: number; left: string; top: string; delay: number }[]
+  >([]);
 
   // 每秒刷新畫面上的倒數計時
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
   }, []);
+  useEffect(() => {
+    if (!user?.id || !currentGroup?.id) return;
 
+    const channel = supabase
+      .channel("realtime-poop")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "poop_logs",
+          filter: `receiver_id=eq.${user.id}`,
+        },
+        (payload) => {
+          // 如果收到的這坨大便剛好是這個群組的，就直接噴
+          if (payload.new.group_id === currentGroup.id) {
+            triggerPoopEffect(1);
+            // 並立刻標記為已讀，防止下次進來又噴一次
+            supabase
+              .from("poop_logs")
+              .update({ is_shown: true })
+              .eq("id", payload.new.id)
+              .then();
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user?.id, currentGroup?.id]);
   // 當 Modal 打開時，抓取「我」發送給「這個頻道所有成員」的最後紀錄
   useEffect(() => {
     if (showMemberModal && user) {
@@ -153,6 +187,30 @@ export default function Home() {
       fetchGroupMembers(currentGroup.id);
     }
   }, [currentGroup?.id]);
+  useEffect(() => {
+    if (currentGroup && user) {
+      checkMyPoopDebt(currentGroup.id);
+    }
+  }, [currentGroup?.id]);
+
+  const checkMyPoopDebt = async (groupId: string) => {
+    // 1. 查出在這個群組裡，有多少還沒顯示的大便
+    const { data, error } = await supabase
+      .from("poop_logs")
+      .select("id")
+      .eq("receiver_id", user.id)
+      .eq("group_id", groupId)
+      .eq("is_shown", false);
+
+    if (data && data.length > 0) {
+      // 2. 有幾筆就噴幾坨
+      triggerPoopEffect(data.length);
+
+      // 3. 噴完後，把這些紀錄在資料庫標記為「已顯示」
+      const ids = data.map((d) => d.id);
+      await supabase.from("poop_logs").update({ is_shown: true }).in("id", ids);
+    }
+  };
   // 登入
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -185,6 +243,19 @@ export default function Home() {
       document.body.style.overflow = "unset";
     }
   }, [showMemberModal]);
+  const triggerPoopEffect = (count: number) => {
+    const newPoops = Array.from({ length: count }).map((_, i) => ({
+      id: Math.random() + i,
+      left: Math.random() * 80 + 10 + "%", // 避開邊緣
+      top: Math.random() * 60 + 20 + "%", // 隨機在螢幕中段
+      delay: Math.random() * 0.5, // 讓它們不要同時出現，稍微錯開
+    }));
+
+    setPoopDrops(newPoops);
+
+    // 動畫結束後清空
+    setTimeout(() => setPoopDrops([]), 3000);
+  };
   // 2. 確保 fetchProfile 時也會把顏色抓回來
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
@@ -208,9 +279,13 @@ export default function Home() {
 
     if (receiverId === user.id) return; // 不能丟自己
 
-    const { error } = await supabase
-      .from("poop_logs")
-      .insert([{ sender_id: user.id, receiver_id: receiverId }]);
+    const { error } = await supabase.from("poop_logs").insert([
+      {
+        sender_id: user.id,
+        receiver_id: receiverId,
+        group_id: currentGroup.id, // 紀錄是在哪個群組丟的
+      },
+    ]);
 
     if (!error) {
       setDbCooldowns((prev) => ({
@@ -1338,6 +1413,22 @@ export default function Home() {
           </div>
         </div>
       )}
+      {/* 債務清算噴屎層 */}
+      <div className="fixed inset-0 pointer-events-none z-[200]">
+        {poopDrops.map((p) => (
+          <span
+            key={p.id}
+            className="animate-poop-pop text-6xl"
+            style={{
+              left: p.left,
+              top: p.top,
+              animationDelay: `${p.delay}s`,
+            }}
+          >
+            💩
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

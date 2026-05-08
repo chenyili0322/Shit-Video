@@ -43,7 +43,6 @@ body {
     -1px 1px 0px rgba(0, 0, 0, 0.9);
 
   will-change: transform;
-
 }
 
 @keyframes danmaku-run {
@@ -71,4 +70,23 @@ body {
     background-color: #222;
     border-radius: 10px;
   }
+}
+@keyframes poop-pop {
+  0% {
+    transform: translate(-50%, -50%) scale(0) rotate(0deg);
+    opacity: 0;
+  }
+  20% {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(2.5) rotate(180deg);
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(4) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+.animate-poop-pop {
+  position: absolute; /* 配合 left/top 定位 */
+  animation: poop-pop 2s ease-out forwards;
 }
