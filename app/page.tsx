@@ -870,12 +870,11 @@ export default function Home() {
                             }
                           }}
                         >
-                          {/* 1. 影片層 / 縮圖層 (互斥切換) */}
+                          {/* 【第一層：影片或縮圖】 */}
                           {isPlaying ? (
                             <iframe
                               width="100%"
                               height="100%"
-                              // 強制加上 autoplay=1 與 rel=0 (不顯示相關影片)
                               src={`${vid.url}${vid.url.includes("?") ? "&" : "?"}autoplay=1&rel=0`}
                               frameBorder="0"
                               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -886,15 +885,14 @@ export default function Home() {
                             <div className="relative w-full h-full">
                               <img
                                 src={`https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`}
-                                className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity"
+                                className="w-full h-full object-cover opacity-60"
                                 onError={(e) => {
                                   (e.currentTarget as HTMLImageElement).src =
                                     `https://img.youtube.com/vi/${ytId}/mqdefault.jpg`;
                                 }}
                               />
-                              {/* 播放按鈕圖示 */}
                               <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center">
                                   <svg
                                     width="32"
                                     height="32"
@@ -908,18 +906,17 @@ export default function Home() {
                             </div>
                           )}
 
-                          {/* 2. 彈幕層 (與影片層獨立，保證 DOM 不會因為 isPlaying 切換而銷毀) */}
+                          {/* 【第二層：彈幕層】獨立出來，不被上面的 isPlaying 影響 */}
                           {showDanmaku && (
                             <div className="absolute inset-0 z-10 pointer-events-none">
                               {vid.comments?.map((c: any, index: number) => {
-                                const track = index % 8; // 分配 8 個軌道
+                                const track = index % 8;
                                 return (
                                   <span
                                     key={c.id}
                                     className="danmaku-item text-base md:text-lg"
                                     style={{
                                       top: `${track * 10 + 5}%`,
-                                      // 越新的彈幕越晚出來
                                       animationDelay: `${index * 1.5}s`,
                                       animationDuration: "10s",
                                     }}
@@ -931,7 +928,6 @@ export default function Home() {
                             </div>
                           )}
                         </div>
-
                         <div className="p-8">
                           {/* 發布者資訊區 */}
                           <div className="flex items-center gap-3 mb-6 bg-black/40 p-3 rounded-2xl border border-gray-800/50">
