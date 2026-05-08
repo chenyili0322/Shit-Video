@@ -24,30 +24,17 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
-@keyframes danmaku-run {
-  from {
-    transform: translateX(100vw);
-  } /* 從螢幕最右側外面開始 */
-  to {
-    transform: translateX(-100%);
-  } /* 飄到自己完全消失在左側 */
-}
-
 .danmaku-item {
   position: absolute;
+  top: 0;
+  left: 0; /* 基準點定在容器左上角 */
   white-space: nowrap;
   pointer-events: none;
   font-weight: 900;
   z-index: 50;
   color: #ffffff;
 
-  /* --- 關鍵補強：初始位置 --- */
-  /* 確保彈幕在動畫開始前，絕對不會出現在螢幕內 */
-  left: 100%;
-  /* ----------------------- */
-
-  -webkit-text-stroke: unset !important;
-
+  /* 解決交疊露餡的陰影 */
   text-shadow:
     1.5px 1.5px 0px rgba(0, 0, 0, 0.9),
     -1px -1px 0px rgba(0, 0, 0, 0.9),
@@ -56,10 +43,23 @@ body {
 
   will-change: transform;
 
-  /* 注意：這裡建議移除 transform: translateZ(0)，因為動畫裡面通常會用到 transform */
-  /* 如果這裡寫死，可能會跟動畫的 transform 衝突 */
+  /* 初始狀態：直接推到容器的最右側外面，解決「閃現」問題 */
+  transform: translateX(calc(100%));
 
-  animation: danmaku-run 8s linear forwards; /* 通常彈幕跑完就消失，建議用 forwards */
+  /* 動態設定：由 JSX 傳入 animation-delay */
+  animation: danmaku-run 8s linear forwards;
+}
+
+@keyframes danmaku-run {
+  from {
+    /* 從容器右側邊界開始 */
+    transform: translateX(calc(100%));
+  }
+  to {
+    /* 飄到左側，負的 100% 是指移動「自身寬度」的距離 */
+    /* 為了確保完全消失，我們用一個夠大的負值 */
+    transform: translateX(-500%);
+  }
 }
 /* app/globals.css */
 @layer utilities {
