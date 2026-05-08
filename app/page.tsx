@@ -335,7 +335,29 @@ export default function Home() {
     setTags("");
     fetchVideos(currentGroup.id);
   };
+  const handleSendDanmaku = async (videoId: string) => {
+    const inputEl = document.getElementById(
+      `danmaku-input-${videoId}`,
+    ) as HTMLInputElement;
+    const content = inputEl?.value.trim();
 
+    if (!content) return;
+
+    const { error } = await supabase.from("comments").insert([
+      {
+        video_id: videoId,
+        user_id: user.id,
+        content: content,
+      },
+    ]);
+
+    if (!error) {
+      inputEl.value = ""; // 清空輸入框
+      inputEl.blur(); // <-- 加上這一行，會強制讓輸入框失去焦點，手機鍵盤就會自動收起來
+    } else {
+      alert("彈幕發射失敗：" + error.message);
+    }
+  };
   const handleRate = async (
     videoId: string,
     score: number,
@@ -708,54 +730,69 @@ export default function Home() {
               </div>
             ) : (
               <div className="space-y-10">
-                <div className="flex justify-between items-center px-2">
-                  <div className="flex items-center gap-3">
-                    <h2 className="text-3xl font-black italic">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-2">
+                  {/* 左側標題與頭像區塊 */}
+                  <div className="flex flex-col gap-2">
+                    {/* 群組標題 */}
+                    <h2 className="text-3xl font-black italic tracking-tighter">
                       {currentGroup.group_name}
                     </h2>
-                    <div className="flex -space-x-2">
-                      {currentMembers.slice(0, 5).map((member, i) => (
-                        <img
-                          key={i}
-                          src={
-                            member.avatar_url ||
-                            `https://api.dicebear.com/7.x/bottts/svg?seed=${i}`
-                          }
-                          style={{
-                            backgroundColor: member.avatar_bg || "#ffffff",
-                          }}
-                          className="w-6 h-6 rounded-full border-2 border-black object-cover"
-                          title={member.display_name}
-                        />
-                      ))}
-                      {currentMembers.length > 5 && (
-                        <span className="text-gray-500 text-xs self-end ml-1">
-                          ...
-                        </span>
-                      )}
-                    </div>
-                    <button
-                      onClick={() => {
-                        navigator.clipboard.writeText(currentGroup.access_key);
-                        alert("複製金鑰成功！");
-                      }}
-                      className="p-2 bg-gray-900 rounded-xl text-yellow-500 border border-gray-800 cursor-pointer shadow-lg"
-                    >
-                      <svg
-                        width="18"
-                        height="18"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2"
+
+                    {/* 成員頭像列表：手機版會在標題下方，電腦版會在標題旁邊（如果需要） */}
+                    <div className="flex items-center gap-2">
+                      <div className="flex -space-x-2">
+                        {currentMembers.slice(0, 5).map((member, i) => (
+                          <img
+                            key={i}
+                            src={
+                              member.avatar_url ||
+                              `https://api.dicebear.com/7.x/bottts/svg?seed=${i}`
+                            }
+                            style={{
+                              backgroundColor: member.avatar_bg || "#ffffff",
+                            }}
+                            className="w-7 h-7 rounded-full border-2 border-black object-cover cursor-pointer hover:z-10 transition-transform active:scale-90"
+                            title={member.display_name}
+                            // 先留著，等一下要在這裡做點擊下拉選單
+                            onClick={() =>
+                              console.log("點擊了成員:", member.display_name)
+                            }
+                          />
+                        ))}
+                        {currentMembers.length > 5 && (
+                          <div className="w-7 h-7 rounded-full bg-gray-800 border-2 border-black flex items-center justify-center text-[10px] font-black text-gray-500">
+                            +{currentMembers.length - 5}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* 這裡是複製金鑰按鈕，放在頭像旁邊比較好按 */}
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(
+                            currentGroup.access_key,
+                          );
+                          alert("金鑰已複製 💩");
+                        }}
+                        className="p-1.5 bg-gray-900 rounded-lg text-yellow-500/50 hover:text-yellow-500 transition-colors"
                       >
-                        <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
-                        <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
-                      </svg>
-                    </button>
+                        <svg
+                          width="14"
+                          height="14"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2.5"
+                        >
+                          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path>
+                          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path>
+                        </svg>
+                      </button>
+                    </div>
                   </div>
-                  <div className="flex gap-4 items-center">
-                    {/* 關鍵判斷：只有創建者才看得到刪除按鈕 */}
+
+                  {/* 右側按鈕區塊（離開頻道、刪除等） */}
+                  <div className="flex gap-3 items-center self-end md:self-center">
                     {user.id === currentGroup.created_by && (
                       <button
                         onClick={() =>
@@ -764,15 +801,14 @@ export default function Home() {
                             currentGroup.group_name,
                           )
                         }
-                        className="text-[10px] text-red-500 font-bold border border-red-500/30 hover:bg-red-500 hover:text-white px-2 py-1 rounded transition cursor-pointer"
+                        className="text-[10px] text-red-500/50 hover:text-red-500 font-bold border border-red-500/20 px-2 py-1 rounded transition"
                       >
                         刪除群組
                       </button>
                     )}
-
                     <button
                       onClick={() => setCurrentGroup(null)}
-                      className="text-xs text-gray-600 hover:text-white cursor-pointer"
+                      className="text-xs text-gray-600 hover:text-white font-bold"
                     >
                       離開頻道
                     </button>
@@ -923,50 +959,46 @@ export default function Home() {
                           <div className="mb-6 px-2">
                             <div className="relative">
                               <input
-                                // 1. 加上 disabled 判斷
+                                id={`danmaku-input-${vid.id}`} // 給每個 input 一個唯一 ID
                                 disabled={user.id === vid.created_by}
-                                className={`w-full bg-black border rounded-2xl py-3 px-4 text-sm outline-none transition-all pr-12 ${
+                                className={`w-full bg-black border rounded-2xl py-3 px-4 text-sm outline-none transition-all pr-14 ${
                                   user.id === vid.created_by
                                     ? "border-gray-900 text-gray-700 cursor-not-allowed opacity-50"
                                     : "border-gray-800 focus:border-blue-500"
                                 }`}
-                                // 2. 提示文字切換
                                 placeholder={
                                   user.id === vid.created_by
                                     ? "不能在自己的影片發彈幕喔 💩"
                                     : "發射彈幕吐槽..."
                                 }
-                                onKeyDown={async (e) => {
-                                  if (
-                                    e.key === "Enter" &&
-                                    e.currentTarget.value.trim()
-                                  ) {
-                                    const content = e.currentTarget.value;
-                                    const inputNode = e.currentTarget;
-
-                                    const { error } = await supabase
-                                      .from("comments")
-                                      .insert([
-                                        {
-                                          video_id: vid.id,
-                                          user_id: user.id,
-                                          content: content,
-                                        },
-                                      ]);
-
-                                    if (!error) {
-                                      inputNode.value = "";
-                                    } else {
-                                      alert("彈幕發射失敗：" + error.message);
-                                    }
+                                onKeyDown={(e) => {
+                                  // 依然保留 Enter 送出的功能
+                                  if (e.key === "Enter") {
+                                    handleSendDanmaku(vid.id);
                                   }
                                 }}
                               />
-                              {/* 3. 右側 ENTER 圖示根據狀態隱藏 */}
+
+                              {/* 這是新的發射按鈕 */}
                               {user.id !== vid.created_by && (
-                                <div className="absolute right-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-gray-600">
-                                  ENTER
-                                </div>
+                                <button
+                                  onClick={() => handleSendDanmaku(vid.id)}
+                                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-xl transition-all active:scale-90"
+                                >
+                                  <svg
+                                    width="16"
+                                    height="16"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2.5"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  >
+                                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                  </svg>
+                                </button>
                               )}
                             </div>
                           </div>
