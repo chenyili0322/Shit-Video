@@ -840,7 +840,6 @@ export default function Home() {
                 <div className="space-y-16">
                   {videoList.map((vid) => {
                     const isShorts = vid.url.includes("#shorts");
-                    // 提取 YouTube ID 用於抓取縮圖
                     const ytId = vid.url
                       .split("/embed/")[1]
                       ?.split("?")[0]
@@ -853,6 +852,7 @@ export default function Home() {
                         key={vid.id}
                         className="bg-gray-900 rounded-[3rem] overflow-hidden border border-gray-800 shadow-2xl"
                       >
+                        {/* 影片容器 */}
                         <div
                           className="mx-auto bg-black relative overflow-hidden group cursor-pointer"
                           style={{
@@ -863,38 +863,36 @@ export default function Home() {
                           onClick={() => {
                             if (!isPlaying) {
                               setPlayingVideoId(vid.id);
-                              // 3 秒後才開啟彈幕
+                              // 點擊後 3 秒開啟彈幕
                               setTimeout(() => {
                                 setActiveDanmakuId(vid.id);
                               }, 3000);
                             }
                           }}
                         >
+                          {/* 1. 影片層 */}
                           {isPlaying ? (
                             <iframe
                               width="100%"
                               height="100%"
-                              src={`${vid.url}${vid.url.includes("?") ? "&" : "?"}autoplay=1`}
+                              // 注意這裡：補上 autoplay=1 & mute=0 (有些瀏覽器要求靜音才能自動播放，但我們是點擊觸發所以通常不用)
+                              src={`${vid.url}${vid.url.includes("?") ? "&" : "?"}autoplay=1&rel=0`}
                               frameBorder="0"
                               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                               allowFullScreen
                               className="relative z-0"
                             ></iframe>
                           ) : (
-                            /* 預覽縮圖層 */
                             <div className="relative w-full h-full">
                               <img
                                 src={`https://img.youtube.com/vi/${ytId}/maxresdefault.jpg`}
-                                className="w-full h-full object-cover opacity-60 group-hover:opacity-80 transition-opacity"
-                                onError={(e) => {
-                                  // 如果沒有高畫質縮圖，換成一般畫質
-                                  (e.target as HTMLImageElement).src =
-                                    `https://img.youtube.com/vi/${ytId}/mqdefault.jpg`;
-                                }}
+                                className="w-full h-full object-cover opacity-60"
+                                onError={(e) =>
+                                  (e.currentTarget.src = `https://img.youtube.com/vi/${ytId}/mqdefault.jpg`)
+                                }
                               />
-                              {/* 播放按鈕圖示 */}
                               <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center group-hover:scale-110 transition-transform">
+                                <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-full flex items-center justify-center">
                                   <svg
                                     width="32"
                                     height="32"
@@ -908,7 +906,7 @@ export default function Home() {
                             </div>
                           )}
 
-                          {/* 彈幕層 - 加上 showDanmaku 判斷 */}
+                          {/* 2. 彈幕層 (獨立出來，不要包在上面的判斷式裡) */}
                           {showDanmaku && (
                             <div className="absolute inset-0 z-10 pointer-events-none">
                               {vid.comments?.map((c: any, index: number) => {
@@ -919,7 +917,7 @@ export default function Home() {
                                     className="danmaku-item text-base md:text-lg"
                                     style={{
                                       top: `${track * 10 + 5}%`,
-                                      animationDelay: `${index * 1.5}s`, // 稍微加快間隔
+                                      animationDelay: `${index * 1.5}s`,
                                       animationDuration: "10s",
                                     }}
                                   >
@@ -930,6 +928,7 @@ export default function Home() {
                             </div>
                           )}
                         </div>
+
                         <div className="p-8">
                           {/* 發布者資訊區 */}
                           <div className="flex items-center gap-3 mb-6 bg-black/40 p-3 rounded-2xl border border-gray-800/50">
