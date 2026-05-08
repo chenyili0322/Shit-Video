@@ -30,7 +30,7 @@ export default function Home() {
   const [currentMembers, setCurrentMembers] = useState<any[]>([]);
   const [playingVideoId, setPlayingVideoId] = useState<string | null>(null);
   const [activeDanmakuId, setActiveDanmakuId] = useState<string | null>(null);
-
+  const [showMemberModal, setShowMemberModal] = useState(false);
   useEffect(() => {
     if (!user) return;
 
@@ -125,7 +125,6 @@ export default function Home() {
         fetchMyGroups(session.user.id);
       }
     });
-
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -141,7 +140,14 @@ export default function Home() {
 
     return () => subscription.unsubscribe();
   }, []);
-
+  // showMemberModal 打開時，禁止背景滾動
+  useEffect(() => {
+    if (showMemberModal) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "unset";
+    }
+  }, [showMemberModal]);
   // 2. 確保 fetchProfile 時也會把顏色抓回來
   const fetchProfile = async (userId: string) => {
     const { data } = await supabase
@@ -742,30 +748,38 @@ export default function Home() {
 
                     {/* 成員頭像列表：手機版會在標題下方，電腦版會在標題旁邊（如果需要） */}
                     <div className="flex items-center gap-2">
-                      <div className="flex -space-x-2">
-                        {currentMembers.slice(0, 5).map((member, i) => (
-                          <img
-                            key={i}
-                            src={
-                              member.avatar_url ||
-                              `https://api.dicebear.com/7.x/bottts/svg?seed=${i}`
-                            }
-                            style={{
-                              backgroundColor: member.avatar_bg || "#ffffff",
-                            }}
-                            className="w-7 h-7 rounded-full border-2 border-black object-cover cursor-pointer hover:z-10 transition-transform active:scale-90"
-                            title={member.display_name}
-                            // 先留著，等一下要在這裡做點擊下拉選單
-                            onClick={() =>
-                              console.log("點擊了成員:", member.display_name)
-                            }
-                          />
-                        ))}
-                        {currentMembers.length > 5 && (
-                          <div className="w-7 h-7 rounded-full bg-gray-800 border-2 border-black flex items-center justify-center text-[10px] font-black text-gray-500">
-                            +{currentMembers.length - 5}
-                          </div>
-                        )}
+                      {/* 把原本頭像列表的容器變成一個 clickable div */}
+                      <div
+                        className="flex items-center gap-2 cursor-pointer hover:opacity-80 active:scale-95 transition-all p-1"
+                        onClick={(e) => {
+                          e.stopPropagation(); // 防止點擊觸發到影片播放
+                          setShowMemberModal(true);
+                        }}
+                      >
+                        <div className="flex -space-x-2">
+                          {currentMembers.slice(0, 5).map((member, i) => (
+                            <img
+                              key={i}
+                              src={
+                                member.avatar_url ||
+                                `https://api.dicebear.com/7.x/bottts/svg?seed=${i}`
+                              }
+                              style={{
+                                backgroundColor: member.avatar_bg || "#ffffff",
+                              }}
+                              className="w-7 h-7 rounded-full border-2 border-black object-cover shadow-sm"
+                            />
+                          ))}
+                          {currentMembers.length > 5 && (
+                            <div className="w-7 h-7 rounded-full bg-gray-800 border-2 border-black flex items-center justify-center text-[10px] font-black text-gray-500">
+                              +{currentMembers.length - 5}
+                            </div>
+                          )}
+                        </div>
+                        {/* 提示使用者可以點擊 */}
+                        <span className="text-[10px] font-black text-gray-500 uppercase ml-1 italic tracking-widest">
+                          View All
+                        </span>
                       </div>
 
                       {/* 這裡是複製金鑰按鈕，放在頭像旁邊比較好按 */}
@@ -930,9 +944,8 @@ export default function Home() {
                                 // 2. 隨機高度：在 5% ~ 85% 之間亂跳，避開最頂部和最底部
                                 const randomTop = ((seed * 7) % 80) + 5;
 
-                                // 3. 隨機速度：讓每條彈幕飛行的時間在 6s ~ 10s 之間，這樣後發的可能會超車
-                                const randomDuration = 6 + (seed % 4);
-
+                                // 3. 隨機速度：讓每條彈幕飛行的時間在 12s ~ 18s 之間，這樣後發的可能會超車
+                                const randomDuration = 12 + (seed % 6);
                                 // 4. 噴發間隔：基礎 0.1s + 隨機微調 + 序號間隔
                                 // 這樣彈幕噴出的節奏就不會死板板的 0.8, 0.8, 0.8
                                 const randomOffset = (seed % 5) * 0.1;
@@ -1147,6 +1160,90 @@ export default function Home() {
           </div>
         </main>
       </div>
+      {/* 成員列表 Modal */}
+      {showMemberModal && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          onClick={() => setShowMemberModal(false)}
+        >
+          <div
+            className="bg-gray-900 w-full max-w-sm rounded-[2.5rem] border border-gray-800 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200"
+            onClick={(e) => e.stopPropagation()} // 防止點擊內容關閉
+          >
+            {/* 標題區 */}
+            <div className="p-6 border-b border-gray-800 flex justify-between items-center">
+              <div>
+                <h3 className="text-xl font-black italic text-yellow-500 tracking-tighter">
+                  CHANNEL MEMBERS
+                </h3>
+                <p className="text-[10px] text-gray-500 font-bold uppercase">
+                  {currentMembers.length} People in this group
+                </p>
+              </div>
+              <button
+                onClick={() => setShowMemberModal(false)}
+                className="w-10 h-10 flex items-center justify-center rounded-full bg-black text-gray-500 hover:text-white"
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* 核心功能：可滾動的列表區域 */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar p-2 max-h-[60vh]">
+              {currentMembers.map((member, i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between p-4 rounded-3xl hover:bg-black/50 transition-colors group cursor-pointer"
+                  onClick={() => {
+                    console.log("選中了成員:", member.display_name);
+                    // 這裡可以做後續功能，例如標記人名
+                  }}
+                >
+                  <div className="flex items-center gap-4">
+                    <img
+                      src={
+                        member.avatar_url ||
+                        `https://api.dicebear.com/7.x/bottts/svg?seed=${i}`
+                      }
+                      style={{ backgroundColor: member.avatar_bg || "#ffffff" }}
+                      className="w-12 h-12 rounded-full border border-gray-800 object-cover"
+                    />
+                    <div>
+                      <p className="font-black text-white group-hover:text-yellow-500 transition-colors">
+                        {member.display_name}
+                      </p>
+                      <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                        Active Member
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* 這裡可以放個小圖示或動作按鈕 */}
+                  <div className="text-gray-700 group-hover:text-yellow-500 transition-colors">
+                    <svg
+                      width="20"
+                      height="20"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3"
+                    >
+                      <polyline points="9 18 15 12 9 6"></polyline>
+                    </svg>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* 底部裝飾 */}
+            <div className="p-4 bg-black/20 text-center">
+              <p className="text-[10px] text-gray-600 font-black italic tracking-widest">
+                SHIT-VIDEO COMMUNITY
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
