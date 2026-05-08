@@ -919,22 +919,34 @@ export default function Home() {
                           )}
 
                           {/* 彈幕層：只在影片真正開始 Play 後才渲染 */}
+                          {/* 彈幕層 */}
                           {canShowDanmaku && (
-                            <div className="absolute inset-0 z-10 pointer-events-none">
+                            <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden">
                               {vid.comments?.map((c: any, index: number) => {
-                                const track = index % 8;
-                                // 既然影片已經開始跑了，這裡的 Delay 就要縮短，不然又要等很久
-                                const initialDelay = 0.5; // 影片開始半秒後就噴第一條
-                                const interval = 0.8; // 每條間隔 0.8 秒
+                                // 1. 利用評論 ID 的最後一個字元轉換成數字，當作隨機種子
+                                const seed =
+                                  c.id.charCodeAt(c.id.length - 1) || index;
+
+                                // 2. 隨機高度：在 5% ~ 85% 之間亂跳，避開最頂部和最底部
+                                const randomTop = ((seed * 7) % 80) + 5;
+
+                                // 3. 隨機速度：讓每條彈幕飛行的時間在 6s ~ 10s 之間，這樣後發的可能會超車
+                                const randomDuration = 6 + (seed % 4);
+
+                                // 4. 噴發間隔：基礎 0.1s + 隨機微調 + 序號間隔
+                                // 這樣彈幕噴出的節奏就不會死板板的 0.8, 0.8, 0.8
+                                const randomOffset = (seed % 5) * 0.1;
+                                const totalDelay =
+                                  0.1 + index * 0.6 + randomOffset;
 
                                 return (
                                   <span
                                     key={c.id}
                                     className="danmaku-item text-base md:text-lg"
                                     style={{
-                                      top: `${track * 10 + 5}%`,
-                                      animationDelay: `${initialDelay + index * interval}s`,
-                                      animationDuration: "10s",
+                                      top: `${randomTop}%`,
+                                      animationDelay: `${totalDelay}s`,
+                                      animationDuration: `${randomDuration}s`, // 蓋掉 CSS 寫死的 10s
                                     }}
                                   >
                                     {c.content}

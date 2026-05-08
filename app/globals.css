@@ -27,7 +27,7 @@ body {
 .danmaku-item {
   position: absolute;
   top: 0;
-  /* 關鍵 1：初始位置定在右側邊界外，解決閃現 */
+  /* 初始位置：絕對要在右側邊界外，防止 React 渲染瞬間在左側閃現 */
   left: 100%;
   white-space: nowrap;
   pointer-events: none;
@@ -35,6 +35,7 @@ body {
   z-index: 50;
   color: #ffffff;
 
+  /* 文字邊框優化 */
   text-shadow:
     1.5px 1.5px 0px rgba(0, 0, 0, 0.9),
     -1px -1px 0px rgba(0, 0, 0, 0.9),
@@ -43,16 +44,15 @@ body {
 
   will-change: transform;
 
-  /* 關鍵 2：動畫只管往左衝，不要在 from 寫 100%，因為 left 已經是 100% 了 */
-  animation: danmaku-run 10s linear forwards;
 }
 
 @keyframes danmaku-run {
   from {
+    /* 這裡的 0 是相對於 left: 100% 的起點 */
     transform: translateX(0);
   }
   to {
-    /* 關鍵 3：這裡要推得夠遠 (-100% 只會推到左邊緣剛好消失，長句子會被切掉) */
+    /* 確保推得夠遠，徹底消失在左側邊界 */
     transform: translateX(-2500px);
   }
 }
