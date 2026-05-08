@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
+import YouTube from "react-youtube";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -872,15 +873,24 @@ export default function Home() {
                         >
                           {/* 【第一層：影片或縮圖】 */}
                           {isPlaying ? (
-                            <iframe
-                              width="100%"
-                              height="100%"
-                              src={`${vid.url}${vid.url.includes("?") ? "&" : "?"}autoplay=1&rel=0&mute=1`}
-                              frameBorder="0"
-                              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                              allowFullScreen
-                              className="relative z-0"
-                            ></iframe>
+                            <YouTube
+                              videoId={ytId} // 只需要傳 ID，例如: dQw4w9WgXcQ
+                              opts={{
+                                width: "100%",
+                                height: "100%",
+                                playerVars: {
+                                  autoplay: 1, // 自動播放
+                                  mute: 1, // 靜音（保證自動播放成功）
+                                  rel: 0, // 不顯示相關影片
+                                  modestbranding: 1,
+                                },
+                              }}
+                              onReady={(event) => {
+                                // 播放器準備好後，強制再下一次播放指令
+                                event.target.playVideo();
+                              }}
+                              className="absolute inset-0 w-full h-full"
+                            />
                           ) : (
                             <div className="relative w-full h-full">
                               <img
