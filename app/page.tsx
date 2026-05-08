@@ -31,6 +31,43 @@ export default function Home() {
   const [playingVideoId, setPlayingVideoId] = useState<string | null>(null);
   const [activeDanmakuId, setActiveDanmakuId] = useState<string | null>(null);
   const [showMemberModal, setShowMemberModal] = useState(false);
+  // 記錄資料庫抓回來的最後發送時間 { [receiver_id]: last_created_at }
+  const [dbCooldowns, setDbCooldowns] = useState<Record<string, string>>({});
+  const [now, setNow] = useState(Date.now());
+
+  // 每秒刷新畫面上的倒數計時
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // 當 Modal 打開時，抓取「我」發送給「這個頻道所有成員」的最後紀錄
+  useEffect(() => {
+    if (showMemberModal && user) {
+      fetchPoopLogs();
+    }
+  }, [showMemberModal]);
+
+  const fetchPoopLogs = async () => {
+    const { data, error } = await supabase
+      .from("poop_logs")
+      .select("receiver_id, created_at")
+      .eq("sender_id", user.id);
+
+    if (data) {
+      const cooldownMap: Record<string, string> = {};
+      data.forEach((log) => {
+        // 每個接收者只保留最新的一筆時間
+        if (
+          !cooldownMap[log.receiver_id] ||
+          new Date(log.created_at) > new Date(cooldownMap[log.receiver_id])
+        ) {
+          cooldownMap[log.receiver_id] = log.created_at;
+        }
+      });
+      setDbCooldowns(cooldownMap);
+    }
+  };
   useEffect(() => {
     if (!user) return;
 
@@ -162,7 +199,28 @@ export default function Home() {
       setAvatarBg(data.avatar_bg || "#ffffff"); // 補上這行，把資料庫的顏色讀出來
     }
   };
+  const handleSendPoop = async (receiver: any) => {
+    // 防呆：不能丟自己
+    if (receiver.id === user.id) return;
 
+    const { error } = await supabase.from("poop_logs").insert([
+      {
+        sender_id: user.id,
+        receiver_id: receiver.id,
+      },
+    ]);
+
+    if (!error) {
+      // 成功後更新本地狀態，讓按鈕立刻進入冷卻
+      setDbCooldowns((prev) => ({
+        ...prev,
+        [receiver.id]: new Date().toISOString(),
+      }));
+      console.log("💩 已同步至資料庫");
+    } else {
+      alert("發送失敗：" + error.message);
+    }
+  };
   const uploadAvatar = async (event: any) => {
     try {
       setUploading(true);
@@ -1168,77 +1226,106 @@ export default function Home() {
         >
           <div
             className="bg-gray-900 w-full max-w-sm rounded-[2.5rem] border border-gray-800 shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in duration-200"
-            onClick={(e) => e.stopPropagation()} // 防止點擊內容關閉
+            onClick={(e) => e.stopPropagation()}
           >
             {/* 標題區 */}
-            <div className="p-6 border-b border-gray-800 flex justify-between items-center">
+            <div className="p-6 border-b border-gray-800 flex justify-between items-center bg-gray-900/50">
               <div>
                 <h3 className="text-xl font-black italic text-yellow-500 tracking-tighter">
                   CHANNEL MEMBERS
                 </h3>
-                <p className="text-[10px] text-gray-500 font-bold uppercase">
+                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
                   {currentMembers.length} People in this group
                 </p>
               </div>
               <button
                 onClick={() => setShowMemberModal(false)}
-                className="w-10 h-10 flex items-center justify-center rounded-full bg-black text-gray-500 hover:text-white"
+                className="w-10 h-10 flex items-center justify-center rounded-full bg-black text-gray-500 hover:text-white transition-colors"
               >
                 ✕
               </button>
             </div>
 
-            {/* 核心功能：可滾動的列表區域 */}
+            {/* 可滾動的成員列表 */}
             <div className="flex-1 overflow-y-auto custom-scrollbar p-2 max-h-[60vh]">
-              {currentMembers.map((member, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between p-4 rounded-3xl hover:bg-black/50 transition-colors group cursor-pointer"
-                  onClick={() => {
-                    console.log("選中了成員:", member.display_name);
-                    // 這裡可以做後續功能，例如標記人名
-                  }}
-                >
-                  <div className="flex items-center gap-4">
-                    <img
-                      src={
-                        member.avatar_url ||
-                        `https://api.dicebear.com/7.x/bottts/svg?seed=${i}`
-                      }
-                      style={{ backgroundColor: member.avatar_bg || "#ffffff" }}
-                      className="w-12 h-12 rounded-full border border-gray-800 object-cover"
-                    />
-                    <div>
-                      <p className="font-black text-white group-hover:text-yellow-500 transition-colors">
-                        {member.display_name}
-                      </p>
-                      <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
-                        Active Member
-                      </p>
-                    </div>
-                  </div>
+              {currentMembers.map((member, i) => {
+                // --- 計算該成員是否在冷卻中 ---
+                const lastTimeStr = dbCooldowns[member.id];
+                const lastTime = lastTimeStr
+                  ? new Date(lastTimeStr).getTime()
+                  : 0;
+                const COOLDOWN_MS = 5 * 60 * 1000;
+                const diff = now - lastTime;
+                const isInCooldown = diff < COOLDOWN_MS;
+                const isMe = member.id === user?.id;
 
-                  {/* 這裡可以放個小圖示或動作按鈕 */}
-                  <div className="text-gray-700 group-hover:text-yellow-500 transition-colors">
-                    <svg
-                      width="20"
-                      height="20"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="3"
-                    >
-                      <polyline points="9 18 15 12 9 6"></polyline>
-                    </svg>
+                return (
+                  <div
+                    key={i}
+                    className="flex items-center justify-between p-4 rounded-3xl hover:bg-black/50 transition-colors group"
+                  >
+                    <div className="flex items-center gap-4">
+                      <img
+                        src={
+                          member.avatar_url ||
+                          `https://api.dicebear.com/7.x/bottts/svg?seed=${i}`
+                        }
+                        style={{
+                          backgroundColor: member.avatar_bg || "#ffffff",
+                        }}
+                        className="w-12 h-12 rounded-full border border-gray-800 object-cover"
+                      />
+                      <div>
+                        <p className="font-black text-white group-hover:text-yellow-500 transition-colors">
+                          {member.display_name} {isMe && "(You)"}
+                        </p>
+                        <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">
+                          {isMe ? "Station Master" : "Active Member"}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* 💩 發送按鈕 */}
+                    {!isMe && (
+                      <button
+                        disabled={isInCooldown}
+                        onClick={() => handleSendPoop(member.id)}
+                        className={`min-w-[75px] h-12 flex flex-col items-center justify-center rounded-2xl font-black transition-all active:scale-90 ${
+                          isInCooldown
+                            ? "bg-gray-800 text-gray-500 cursor-not-allowed"
+                            : "bg-black text-gray-400 hover:text-yellow-500 hover:bg-gray-800 cursor-pointer shadow-lg"
+                        }`}
+                      >
+                        {isInCooldown ? (
+                          <div className="flex flex-col items-center leading-none">
+                            <span className="text-[9px] mb-1 opacity-50">
+                              CD
+                            </span>
+                            <span className="text-xs font-mono">
+                              {(() => {
+                                const rem = Math.floor(
+                                  (COOLDOWN_MS - diff) / 1000,
+                                );
+                                const m = Math.floor(rem / 60);
+                                const s = rem % 60;
+                                return `${m}:${s < 10 ? "0" : ""}${s}`;
+                              })()}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-xl">💩</span>
+                        )}
+                      </button>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
-            {/* 底部裝飾 */}
-            <div className="p-4 bg-black/20 text-center">
-              <p className="text-[10px] text-gray-600 font-black italic tracking-widest">
-                SHIT-VIDEO COMMUNITY
+            {/* 底部區域 */}
+            <div className="p-4 bg-black/20 text-center border-t border-gray-800/30">
+              <p className="text-[10px] text-gray-600 font-black italic tracking-widest uppercase">
+                每個人有五分鐘冷卻時間 💩
               </p>
             </div>
           </div>
