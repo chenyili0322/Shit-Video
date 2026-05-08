@@ -866,7 +866,7 @@ export default function Home() {
                               // 點擊後 3 秒開啟彈幕
                               setTimeout(() => {
                                 setActiveDanmakuId(vid.id);
-                              }, 3000);
+                              }, 1000);
                             }
                           }}
                         >
@@ -917,7 +917,7 @@ export default function Home() {
                                     className="danmaku-item text-base md:text-lg"
                                     style={{
                                       top: `${track * 10 + 5}%`,
-                                      animationDelay: `${index * 1.5}s`,
+                                      animationDelay: `${index * 0.5}s`,
                                       animationDuration: "10s",
                                     }}
                                   >
