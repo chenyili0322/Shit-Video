@@ -27,14 +27,14 @@ body {
 .danmaku-item {
   position: absolute;
   top: 0;
-  left: 0; /* 基準點定在容器左上角 */
+  /* 關鍵 1：初始位置定在右側邊界外，解決閃現 */
+  left: 100%;
   white-space: nowrap;
   pointer-events: none;
   font-weight: 900;
   z-index: 50;
   color: #ffffff;
 
-  /* 解決交疊露餡的陰影 */
   text-shadow:
     1.5px 1.5px 0px rgba(0, 0, 0, 0.9),
     -1px -1px 0px rgba(0, 0, 0, 0.9),
@@ -43,22 +43,17 @@ body {
 
   will-change: transform;
 
-  /* 初始狀態：直接推到容器的最右側外面，解決「閃現」問題 */
-  transform: translateX(calc(100%));
-
-  /* 動態設定：由 JSX 傳入 animation-delay */
-  animation: danmaku-run 8s linear forwards;
+  /* 關鍵 2：動畫只管往左衝，不要在 from 寫 100%，因為 left 已經是 100% 了 */
+  animation: danmaku-run 10s linear forwards;
 }
 
 @keyframes danmaku-run {
   from {
-    /* 從容器右側邊界開始 */
-    transform: translateX(calc(100%));
+    transform: translateX(0);
   }
   to {
-    /* 飄到左側，負的 100% 是指移動「自身寬度」的距離 */
-    /* 為了確保完全消失，我們用一個夠大的負值 */
-    transform: translateX(-500%);
+    /* 關鍵 3：這裡要推得夠遠 (-100% 只會推到左邊緣剛好消失，長句子會被切掉) */
+    transform: translateX(-2500px);
   }
 }
 /* app/globals.css */
