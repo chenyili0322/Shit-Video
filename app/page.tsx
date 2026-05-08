@@ -199,26 +199,24 @@ export default function Home() {
       setAvatarBg(data.avatar_bg || "#ffffff"); // 補上這行，把資料庫的顏色讀出來
     }
   };
-  const handleSendPoop = async (receiver: any) => {
-    // 防呆：不能丟自己
-    if (receiver.id === user.id) return;
+  const handleSendPoop = async (receiverId: string) => {
+    // 加上這行保護：如果 user 還沒登入或 receiverId 不存在就直接返回
+    if (!user?.id || !receiverId) {
+      console.error("發送失敗：使用者未登入或接收者無效");
+      return;
+    }
 
-    const { error } = await supabase.from("poop_logs").insert([
-      {
-        sender_id: user.id,
-        receiver_id: receiver.id,
-      },
-    ]);
+    if (receiverId === user.id) return; // 不能丟自己
+
+    const { error } = await supabase
+      .from("poop_logs")
+      .insert([{ sender_id: user.id, receiver_id: receiverId }]);
 
     if (!error) {
-      // 成功後更新本地狀態，讓按鈕立刻進入冷卻
       setDbCooldowns((prev) => ({
         ...prev,
-        [receiver.id]: new Date().toISOString(),
+        [receiverId]: new Date().toISOString(),
       }));
-      console.log("💩 已同步至資料庫");
-    } else {
-      alert("發送失敗：" + error.message);
     }
   };
   const uploadAvatar = async (event: any) => {
@@ -474,12 +472,13 @@ export default function Home() {
       .select(
         `
       profiles (
+        id, 
         display_name, 
         avatar_url, 
         avatar_bg
       )
     `,
-      )
+      ) // <--- 這裡一定要加 id！
       .eq("group_id", groupId);
 
     if (error) {
@@ -488,9 +487,13 @@ export default function Home() {
     }
 
     if (data) {
-      // 攤平資料：取出關聯的 profiles 內容
-      const members = data.map((m: any) => m.profiles).filter(Boolean);
+      // 攤平資料：取出關聯的 profiles 內容，並濾掉空的資料
+      const members = data
+        .map((m: any) => m.profiles)
+        .filter((profile) => profile !== null && profile.id !== undefined);
+
       setCurrentMembers(members);
+      console.log("成功抓取成員列表:", members); // 可以開控制台確認 id 出來了沒
     }
   };
   const handleLogout = async () => {
@@ -1249,6 +1252,10 @@ export default function Home() {
             {/* 可滾動的成員列表 */}
             <div className="flex-1 overflow-y-auto custom-scrollbar p-2 max-h-[60vh]">
               {currentMembers.map((member, i) => {
+                if (!member || !member.id) {
+                  console.warn(`第 ${i} 個成員資料不完整`, member);
+                  return null;
+                }
                 // --- 計算該成員是否在冷卻中 ---
                 const lastTimeStr = dbCooldowns[member.id];
                 const lastTime = lastTimeStr
