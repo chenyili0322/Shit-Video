@@ -846,7 +846,6 @@ export default function Home() {
                       ?.split("?")[0]
                       ?.split("#")[0];
                     const isPlaying = playingVideoId === vid.id;
-                    const showDanmaku = activeDanmakuId === vid.id;
 
                     return (
                       <div
@@ -864,10 +863,6 @@ export default function Home() {
                           onClick={() => {
                             if (!isPlaying) {
                               setPlayingVideoId(vid.id);
-                              // 點擊後 3 秒開啟彈幕
-                              setTimeout(() => {
-                                setActiveDanmakuId(vid.id);
-                              }, 1000);
                             }
                           }}
                         >
@@ -880,7 +875,7 @@ export default function Home() {
                                 height: "100%",
                                 playerVars: {
                                   autoplay: 1, // 自動播放
-                                  mute: 1, // 靜音（保證自動播放成功）
+                                  mute: 0, // 靜音（保證自動播放成功）
                                   rel: 0, // 不顯示相關影片
                                   modestbranding: 1,
                                 },
@@ -917,17 +912,22 @@ export default function Home() {
                           )}
 
                           {/* 【第二層：彈幕層】獨立出來，不被上面的 isPlaying 影響 */}
-                          {showDanmaku && (
+                          {isPlaying && (
                             <div className="absolute inset-0 z-10 pointer-events-none">
                               {vid.comments?.map((c: any, index: number) => {
                                 const track = index % 8;
+
+                                // 這裡計算「總延遲」
+                                // 基礎延遲 1s (等影片跑) + 彈幕排序延遲 (index * 0.5s)
+                                const totalDelay = 1 + index * 0.5;
+
                                 return (
                                   <span
                                     key={c.id}
                                     className="danmaku-item text-base md:text-lg"
                                     style={{
                                       top: `${track * 10 + 5}%`,
-                                      animationDelay: `${index * 0.5}s`,
+                                      animationDelay: `${totalDelay}s`, // 直接寫入計算後的秒數
                                       animationDuration: "10s",
                                     }}
                                   >
