@@ -243,17 +243,18 @@ export default function Home() {
       document.body.style.overflow = "unset";
     }
   }, [showMemberModal]);
+  
   const triggerPoopEffect = (count: number) => {
     const newPoops = Array.from({ length: count }).map((_, i) => ({
       id: Math.random() + i,
-      left: Math.random() * 80 + 10 + "%", // 避開邊緣
-      top: Math.random() * 60 + 20 + "%", // 隨機在螢幕中段
-      delay: Math.random() * 0.5, // 讓它們不要同時出現，稍微錯開
+      // 修改這裡：手機板寬度有限，範圍縮小到 15%~85% 比較保險
+      left: Math.random() * 70 + 15 + "%",
+      // 修改這裡：高度盡量在螢幕中段 25%~75%，比較容易被看到
+      top: Math.random() * 50 + 25 + "%",
+      delay: Math.random() * 0.5,
     }));
 
     setPoopDrops(newPoops);
-
-    // 動畫結束後清空
     setTimeout(() => setPoopDrops([]), 3000);
   };
   // 2. 確保 fetchProfile 時也會把顏色抓回來
