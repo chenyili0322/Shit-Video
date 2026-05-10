@@ -243,7 +243,7 @@ export default function Home() {
       document.body.style.overflow = "unset";
     }
   }, [showMemberModal]);
-  
+
   const triggerPoopEffect = (count: number) => {
     const newPoops = Array.from({ length: count }).map((_, i) => ({
       id: Math.random() + i,
@@ -1247,7 +1247,18 @@ export default function Home() {
                                     handleRate(vid.id, i.s, vid.created_by)
                                   }
                                   disabled={user.id === vid.created_by}
-                                  className={`w-11 h-11 rounded-2xl border-2 font-black text-lg transition-all cursor-pointer ${user.id === vid.created_by ? "border-gray-800 text-gray-800 opacity-20" : "border-gray-800 hover:bg-yellow-500 hover:text-black"}`}
+                                  className={`w-11 h-11 rounded-2xl border-2 font-black text-lg transition-all cursor-pointer 
+    ${
+      user.id === vid.created_by
+        ? "border-gray-800 text-gray-800 opacity-20"
+        : "border-gray-800 hover:bg-yellow-500 hover:text-black"
+    }
+    ${
+      /* 這裡判斷：如果目前的分數等於這顆按鈕代表的分數，就變色 */
+      vid.rating === i.s
+        ? "bg-yellow-500 text-black"
+        : "bg-transparent text-white"
+    }`}
                                 >
                                   {i.l}
                                 </button>
