@@ -1254,10 +1254,10 @@ export default function Home() {
         : "border-gray-800 hover:bg-yellow-500 hover:text-black"
     }
     ${
-      /* 這裡判斷：如果目前的分數等於這顆按鈕代表的分數，就變色 */
-      vid.rating === i.s
-        ? "bg-yellow-500 text-black"
-        : "bg-transparent text-white"
+      /* 核心判斷邏輯 */
+      vid.rating !== undefined && Number(vid.rating) === Number(i.s)
+        ? "bg-yellow-500 text-black border-yellow-500" // 選中狀態
+        : "bg-transparent text-white" // 未選中狀態
     }`}
                                 >
                                   {i.l}
