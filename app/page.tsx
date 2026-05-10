@@ -1207,17 +1207,12 @@ export default function Home() {
                             <div className="relative">
                               <input
                                 id={`danmaku-input-${vid.id}`} // 給每個 input 一個唯一 ID
-                                disabled={user.id === vid.created_by}
                                 className={`w-full bg-black border rounded-2xl py-3 px-4 text-sm outline-none transition-all pr-14 ${
                                   user.id === vid.created_by
                                     ? "border-gray-900 text-gray-700 cursor-not-allowed opacity-50"
                                     : "border-gray-800 focus:border-blue-500"
                                 }`}
-                                placeholder={
-                                  user.id === vid.created_by
-                                    ? "不能在自己的影片發彈幕喔 💩"
-                                    : "發射彈幕吐槽..."
-                                }
+                                placeholder="發射彈幕..."
                                 onKeyDown={(e) => {
                                   // 依然保留 Enter 送出的功能
                                   if (e.key === "Enter") {
@@ -1226,27 +1221,25 @@ export default function Home() {
                                 }}
                               />
 
-                              {/* 這是新的發射按鈕 */}
-                              {user.id !== vid.created_by && (
-                                <button
-                                  onClick={() => handleSendDanmaku(vid.id)}
-                                  className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-xl transition-all active:scale-90"
+                              {/* 發射按鈕 */}
+                              <button
+                                onClick={() => handleSendDanmaku(vid.id)}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 bg-blue-600 hover:bg-blue-500 text-white p-2 rounded-xl transition-all active:scale-90"
+                              >
+                                <svg
+                                  width="16"
+                                  height="16"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2.5"
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
                                 >
-                                  <svg
-                                    width="16"
-                                    height="16"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2.5"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                  >
-                                    <line x1="22" y1="2" x2="11" y2="13"></line>
-                                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                                  </svg>
-                                </button>
-                              )}
+                                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                </svg>
+                              </button>
                             </div>
                           </div>
                           <div className="flex items-center justify-between pt-8 border-t border-gray-800/50">
