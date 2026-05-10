@@ -505,12 +505,30 @@ export default function Home() {
     creatorId: string,
   ) => {
     if (user.id === creatorId) return alert("不能投自己");
-    await supabase
-      .from("ratings")
-      .upsert(
-        { video_id: videoId, user_id: user.id, score },
-        { onConflict: "video_id, user_id" },
-      );
+
+    // 找出舊的評分
+    const currentVid = videoList.find((v) => v.id === videoId);
+    const existingRating = currentVid?.ratings?.find(
+      (r: any) => r.user_id === user.id,
+    );
+
+    // 如果點的是同一個分數，就執行刪除（取消評分）
+    if (existingRating && existingRating.score === score) {
+      await supabase
+        .from("ratings")
+        .delete()
+        .eq("video_id", videoId)
+        .eq("user_id", user.id);
+    } else {
+      // 否則執行更新或新增
+      await supabase
+        .from("ratings")
+        .upsert(
+          { video_id: videoId, user_id: user.id, score },
+          { onConflict: "video_id, user_id" },
+        );
+    }
+
     fetchVideos(currentGroup.id);
   };
 
@@ -991,6 +1009,13 @@ export default function Home() {
 
                 <div className="space-y-16">
                   {videoList.map((vid) => {
+                    {
+                      /* 在按鈕 map 之前，先找出目前登入者對這則影片投了幾分 */
+                    }
+                    const myRating = vid.ratings?.find(
+                      (r: any) => r.user_id === user.id,
+                    )?.score;
+
                     const isShorts = vid.url.includes("#shorts");
                     const ytId = vid.url
                       .split("/embed/")[1]
@@ -1069,7 +1094,6 @@ export default function Home() {
                             </div>
                           )}
 
-                          {/* 彈幕層：只在影片真正開始 Play 後才渲染 */}
                           {/* 彈幕層 */}
                           {canShowDanmaku && (
                             <div className="absolute inset-0 z-10 pointer-events-none overflow-hidden">
@@ -1240,29 +1264,30 @@ export default function Home() {
                                 { l: "ㄆ", s: 3 },
                                 { l: "ㄇ", s: 2 },
                                 { l: "ㄈ", s: 1 },
-                              ].map((i) => (
-                                <button
-                                  key={i.l}
-                                  onClick={() =>
-                                    handleRate(vid.id, i.s, vid.created_by)
-                                  }
-                                  disabled={user.id === vid.created_by}
-                                  className={`w-11 h-11 rounded-2xl border-2 font-black text-lg transition-all cursor-pointer 
-    ${
-      user.id === vid.created_by
-        ? "border-gray-800 text-gray-800 opacity-20"
-        : "border-gray-800 hover:bg-yellow-500 hover:text-black"
-    }
-    ${
-      /* 核心判斷邏輯 */
-      vid.rating !== undefined && Number(vid.rating) === Number(i.s)
-        ? "bg-yellow-500 text-black border-yellow-500" // 選中狀態
-        : "bg-transparent text-white" // 未選中狀態
-    }`}
-                                >
-                                  {i.l}
-                                </button>
-                              ))}
+                              ].map((i) => {
+                                // 判斷這個按鈕的分數是否等於我投的分數
+                                const isSelected = myRating === i.s;
+
+                                return (
+                                  <button
+                                    key={i.l}
+                                    onClick={() =>
+                                      handleRate(vid.id, i.s, vid.created_by)
+                                    }
+                                    disabled={user.id === vid.created_by}
+                                    className={`w-11 h-11 rounded-2xl border-2 font-black text-lg transition-all cursor-pointer 
+            ${
+              user.id === vid.created_by
+                ? "border-gray-900 text-gray-800 opacity-20 cursor-not-allowed"
+                : isSelected
+                  ? "bg-yellow-500 text-black border-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.4)]"
+                  : "border-gray-800 text-white hover:bg-gray-800"
+            }`}
+                                  >
+                                    {i.l}
+                                  </button>
+                                );
+                              })}
                             </div>
                           </div>
                           <div className="mt-6 flex flex-wrap gap-2">
