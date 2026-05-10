@@ -103,11 +103,16 @@ export default function HomeContent() {
       fetchPoopLogs();
     }
   }, [showMemberModal]);
+  // HomeContent.tsx 裡的 useEffect 修改建議
   useEffect(() => {
-    if (user) {
-      subscribe(); // 這會啟動 sw.js 註冊與金鑰儲存
+    // 增加一個 flag，確保在這個 session 裡只跑一次
+    let isSubscribed = false;
+
+    if (user && !isSubscribed) {
+      subscribe();
+      isSubscribed = true;
     }
-  }, [user]);
+  }, [user?.id]); // 只監聽 user.id，不要監聽整個 user 物件
   const fetchPoopLogs = async () => {
     const { data, error } = await supabase
       .from("poop_logs")
