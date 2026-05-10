@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
+import { usePushNotifications } from "@/hooks/usePushNotifications";
 import YouTube from "react-youtube";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -37,6 +38,8 @@ export default function Home() {
   const [poopDrops, setPoopDrops] = useState<
     { id: number; left: string; top: string; delay: number }[]
   >([]);
+  // 2. 初始化 Hook
+  const { subscribe } = usePushNotifications(user);
 
   // 每秒刷新畫面上的倒數計時
   useEffect(() => {
@@ -57,10 +60,12 @@ export default function Home() {
           filter: `receiver_id=eq.${user.id}`,
         },
         (payload) => {
-          // 如果收到的這坨大便剛好是這個群組的，就直接噴
-          if (payload.new.group_id === currentGroup.id) {
+          // 加上 payload.new.sender_id !== user.id 的判斷
+          if (
+            payload.new.group_id === currentGroup.id &&
+            payload.new.sender_id !== user.id
+          ) {
             triggerPoopEffect(1);
-            // 並立刻標記為已讀，防止下次進來又噴一次
             supabase
               .from("poop_logs")
               .update({ is_shown: true })
@@ -81,7 +86,11 @@ export default function Home() {
       fetchPoopLogs();
     }
   }, [showMemberModal]);
-
+  useEffect(() => {
+    if (user) {
+      subscribe(); // 這會啟動 sw.js 註冊與金鑰儲存
+    }
+  }, [user]);
   const fetchPoopLogs = async () => {
     const { data, error } = await supabase
       .from("poop_logs")
@@ -245,17 +254,29 @@ export default function Home() {
   }, [showMemberModal]);
 
   const triggerPoopEffect = (count: number) => {
-    const newPoops = Array.from({ length: count }).map((_, i) => ({
-      id: Math.random() + i,
-      // 修改這裡：手機板寬度有限，範圍縮小到 15%~85% 比較保險
-      left: Math.random() * 70 + 15 + "%",
-      // 修改這裡：高度盡量在螢幕中段 25%~75%，比較容易被看到
-      top: Math.random() * 50 + 25 + "%",
+    // 限制單次噴發上限，避免手機過熱或卡頓
+    const safeCount = Math.min(count, 15);
+
+    const newPoops = Array.from({ length: safeCount }).map((_, i) => ({
+      id: Date.now() + Math.random() + i,
+      left: Math.random() * 70 + 15 + "%", // 15%~85% 避開邊緣
+      top: Math.random() * 60 + 20 + "%", // 20%~80% 螢幕中段
       delay: Math.random() * 0.5,
     }));
 
-    setPoopDrops(newPoops);
-    setTimeout(() => setPoopDrops([]), 3000);
+    setPoopDrops((prev) => [...prev, ...newPoops]);
+
+    // 手機震動強烈推薦加上去，體感差很多！
+    if (typeof navigator !== "undefined" && navigator.vibrate) {
+      navigator.vibrate([100, 50, 100]);
+    }
+
+    // 3秒後只移除「這一批」產生的 ID
+    setTimeout(() => {
+      setPoopDrops((prev) =>
+        prev.filter((p) => !newPoops.some((n) => n.id === p.id)),
+      );
+    }, 3500);
   };
   // 2. 確保 fetchProfile 時也會把顏色抓回來
   const fetchProfile = async (userId: string) => {
@@ -1207,11 +1228,7 @@ export default function Home() {
                             <div className="relative">
                               <input
                                 id={`danmaku-input-${vid.id}`} // 給每個 input 一個唯一 ID
-                                className={`w-full bg-black border rounded-2xl py-3 px-4 text-sm outline-none transition-all pr-14 ${
-                                  user.id === vid.created_by
-                                    ? "border-gray-900 text-gray-700 cursor-not-allowed opacity-50"
-                                    : "border-gray-800 focus:border-blue-500"
-                                }`}
+                                className="w-full bg-black border border-gray-800 rounded-2xl py-3 px-4 text-sm outline-none transition-all pr-14 focus:border-blue-500"
                                 placeholder="發射彈幕..."
                                 onKeyDown={(e) => {
                                   // 依然保留 Enter 送出的功能

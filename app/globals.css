@@ -47,12 +47,12 @@ body {
 
 @keyframes danmaku-run {
   from {
-    /* 這裡的 0 是相對於 left: 100% 的起點 */
+    /* 起點在右邊緣外 */
     transform: translateX(0);
   }
   to {
-    /* 確保推得夠遠，徹底消失在左側邊界 */
-    transform: translateX(-2500px);
+    /* 終點在左邊緣外 (-100vw 代表往左推一個螢幕寬度，再加上 -100% 確保文字本體也出去) */
+    transform: translateX(calc(-100vw - 100%));
   }
 }
 /* app/globals.css */
