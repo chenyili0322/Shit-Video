@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@supabase/supabase-js";
 import { usePushNotifications } from "@/hooks/usePushNotifications";
+import { useSearchParams } from "next/navigation";
 import YouTube from "react-youtube";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -9,6 +10,7 @@ const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 export default function Home() {
+  const searchParams = useSearchParams();
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
@@ -41,6 +43,21 @@ export default function Home() {
   // 2. 初始化 Hook
   const { subscribe } = usePushNotifications(user);
 
+  useEffect(() => {
+    const groupIdFromUrl = searchParams.get("groupId");
+
+    // 如果網址有 groupId，且我們已經抓到 myGroups 列表了
+    if (groupIdFromUrl && myGroups.length > 0) {
+      const targetGroup = myGroups.find((g) => g.id === groupIdFromUrl);
+      if (targetGroup) {
+        setCurrentGroup(targetGroup);
+        fetchVideos(targetGroup.id);
+
+        // 選擇性：清理網址，讓它變回乾淨的 /
+        window.history.replaceState({}, "", "/");
+      }
+    }
+  }, [searchParams, myGroups]); // 監聽網址與群組列表
   // 每秒刷新畫面上的倒數計時
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 1000);

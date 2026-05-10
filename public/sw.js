@@ -15,7 +15,10 @@ self.addEventListener("push", (event) => {
   event.waitUntil(self.registration.showNotification(data.title, options));
 });
 
-self.addEventListener("notificationclick", (event) => {
+self.addEventListener("notificationclick", function (event) {
   event.notification.close();
-  event.waitUntil(clients.openWindow(event.notification.data.url));
+  // 取得剛才存的帶參數 URL
+  const targetUrl = event.notification.data.url || "/";
+
+  event.waitUntil(clients.openWindow(targetUrl));
 });

@@ -1,5 +1,6 @@
-import { createClient } from "supabase";
-import WebPush from "web-push";
+// supabase/functions/push-notification/index.ts
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import WebPush from "https://esm.sh/web-push";
 
 Deno.serve(async (req) => {
   try {
@@ -43,7 +44,8 @@ Deno.serve(async (req) => {
         JSON.stringify({
           title: "SHIT-VIDEO 有新大便！",
           body: `有人分享了新影片：${record.title || "快來看！"} 💩`,
-          url: "/",
+          // 這裡加上 group_id 參數
+          url: `/?groupId=${record.group_id}`,
         }),
       ).catch((err) => console.error("單一推播發送失敗:", err));
     });
